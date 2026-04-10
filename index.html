@@ -588,6 +588,23 @@ function scrubPHI(event) {
 <h2 id="bots">11. Bots, emails &amp; why "PR Review" keeps failing right now</h2>
 
 <div class="panel warn">
+<h4>Two newer findings (2026-04-10 second autonomous run)</h4>
+<p><strong>Finding 1 — There are 30 open PRs sitting on expandhealthai</strong>, the oldest from
+   March 27. Many are real bug fixes (collapsible sidebar, biomarker reference range, booking
+   slot dedup, agreement signature persistence, etc.). The audit was unexpected — the
+   action checklist at <code>~/Projects/emilian-pa/docs/CHECKLIST.md</code> §1 has the full
+   triage list.</p>
+<p><strong>Finding 2 — Branch protection has an edge case</strong> that blocks every docs-only or
+   non-app-code PR from merging. Required status checks are <code>Lint and Test</code> and
+   <code>Security Scan</code>, but those workflows have a <code>paths:</code> filter scoped to
+   <code>demo/expand-health/v2/**</code>. Any PR that doesn't touch the v2 app code (docs,
+   <code>.github/</code>, root files, <code>.claude/</code>) leaves those required checks
+   "expected but missing" → BLOCKED forever. This explains why PRs #1494 and #1495 (both
+   docs-only) are unmergeable, and probably why a chunk of the 30 stale PRs are stuck. Three
+   fix options documented in <code>CHECKLIST.md</code> §2.</p>
+</div>
+
+<div class="panel warn">
 <h4>The reason "PR Review" was failing for ~24 hours (RESOLVED — PR #1488 all checks green 2026-04-10)</h4>
 <p>I pulled the last 15 PR Review runs on <code>expandhealthai</code> — the workflow has been
    failing on <em>every PR for the past day</em>. The failure isn't a configuration bug. It's
