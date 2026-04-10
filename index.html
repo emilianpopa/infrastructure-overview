@@ -1,0 +1,870 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Emilian Popa — Engineering Infrastructure Overview</title>
+<style>
+  :root {
+    --bg: #0b0d10;
+    --panel: #14181d;
+    --panel-2: #1b2128;
+    --line: #262d36;
+    --text: #e7ecf1;
+    --muted: #97a3b1;
+    --accent: #6ea8fe;
+    --accent-2: #7ce3a8;
+    --warn: #f0b86e;
+    --code-bg: #0f1318;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.55; font-size: 16px; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 48px 28px 96px; }
+  header { border-bottom: 1px solid var(--line); padding-bottom: 28px; margin-bottom: 36px; }
+  h1 { font-size: 34px; margin: 0 0 8px; letter-spacing: -0.01em; }
+  h2 { font-size: 22px; margin: 48px 0 14px; padding-top: 14px; border-top: 1px solid var(--line); letter-spacing: -0.01em; }
+  h3 { font-size: 17px; margin: 28px 0 8px; color: var(--accent); letter-spacing: 0.01em; text-transform: uppercase; font-weight: 600; }
+  h4 { font-size: 15px; margin: 18px 0 6px; }
+  p { margin: 8px 0 12px; color: var(--text); }
+  .lead { color: var(--muted); font-size: 17px; max-width: 720px; }
+  .meta { color: var(--muted); font-size: 13px; }
+  ul { padding-left: 20px; margin: 8px 0 16px; }
+  li { margin: 4px 0; }
+  code { background: var(--code-bg); padding: 1px 6px; border-radius: 4px; font-size: 13px;
+    font-family: "SF Mono", Menlo, Consolas, monospace; color: #c8d4e0; border: 1px solid #1d242c; }
+  pre { background: var(--code-bg); border: 1px solid #1d242c; border-radius: 8px;
+    padding: 14px 16px; overflow-x: auto; font-size: 12.5px; line-height: 1.55; color: #c8d4e0; }
+  .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin: 16px 0 8px; }
+  .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px 18px; }
+  .stat .num { font-size: 28px; font-weight: 700; color: var(--accent-2); letter-spacing: -0.02em; }
+  .stat .lbl { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 22px; margin: 14px 0; }
+  .panel.warn { border-color: #5b4a23; background: #1f1810; }
+  .badge { display: inline-block; background: var(--panel-2); border: 1px solid var(--line);
+    border-radius: 999px; padding: 2px 10px; font-size: 12px; color: var(--muted); margin: 2px 4px 2px 0; }
+  .badge.green { color: #b6f0c8; border-color: #2c4a36; background: #112116; }
+  .badge.blue  { color: #cfe0ff; border-color: #2c3e5a; background: #11192a; }
+  .badge.amber { color: #f5d39a; border-color: #5b4a23; background: #1f1810; }
+  table { width: 100%; border-collapse: collapse; margin: 10px 0 18px; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; }
+  tr:hover td { background: #11161c; }
+  .toc { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px 22px; }
+  .toc ol { margin: 0; padding-left: 22px; }
+  .toc li { margin: 3px 0; }
+  .toc a { color: var(--text); text-decoration: none; }
+  .toc a:hover { color: var(--accent); }
+  .flow { background: var(--code-bg); border: 1px solid #1d242c; border-radius: 8px;
+    padding: 18px 22px; font-family: "SF Mono", Menlo, Consolas, monospace;
+    font-size: 12.5px; line-height: 1.7; color: #c8d4e0; white-space: pre; overflow-x: auto; }
+  footer { margin-top: 64px; padding-top: 24px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>Engineering Infrastructure Overview</h1>
+  <p class="lead">A snapshot of the build, deploy, security, and automation stack
+    Emilian Popa has put in place across all personal &amp; commercial projects.
+    Compiled to share the picture in one read.</p>
+  <p class="meta">Owner: Emilian Popa &middot; Compiled: April 2026 &middot; Scope: 200+ private repos across health AI, real estate, automation, and personal tools</p>
+</header>
+
+<div class="toc">
+  <strong>Contents</strong>
+  <ol>
+    <li><a href="#snapshot">At-a-glance snapshot</a></li>
+    <li><a href="#github">GitHub — source of truth</a></li>
+    <li><a href="#cloud-dev">Cloud development environment</a></li>
+    <li><a href="#cicd">CI / CD pipeline architecture</a></li>
+    <li><a href="#qa">Quality assurance, branch protection &amp; PR safety guards</a></li>
+    <li><a href="#security">Security &amp; vulnerability scanning</a></li>
+    <li><a href="#backup">Backups &amp; disaster recovery</a></li>
+    <li><a href="#sentry">Error monitoring (Sentry)</a></li>
+    <li><a href="#railway">Railway — production hosting</a></li>
+    <li><a href="#claude">Autonomous Claude integrations</a></li>
+    <li><a href="#bots">Bots, emails &amp; why "PR Review" keeps failing right now</a></li>
+    <li><a href="#skills">Skills system (cross-project) &amp; Babysitter</a></li>
+    <li><a href="#pa">Personal assistant hub (emilian-pa)</a></li>
+    <li><a href="#stack">Technology &amp; vendor stack</a></li>
+  </ol>
+</div>
+
+<h2 id="snapshot">1. At-a-glance snapshot</h2>
+
+<div class="grid">
+  <div class="stat"><div class="num">200+</div><div class="lbl">Private GitHub repos</div></div>
+  <div class="stat"><div class="num">40+</div><div class="lbl">Railway projects</div></div>
+  <div class="stat"><div class="num">11</div><div class="lbl">CI/CD workflows on flagship app</div></div>
+  <div class="stat"><div class="num">90 days</div><div class="lbl">Backup retention &amp; restore-tested</div></div>
+  <div class="stat"><div class="num">€18 / mo</div><div class="lbl">Self-hosted cloud dev environment</div></div>
+  <div class="stat"><div class="num">€0</div><div class="lbl">CI cost (self-hosted runner)</div></div>
+</div>
+
+<p>The stack is opinionated: every project flows the same way — code on GitHub,
+   reviews and security scans run automatically, deploys go to Railway from
+   <code>main</code>, secrets live in Railway / GitHub Secrets, and Claude Code
+   acts as both reviewer and on-call collaborator inside PRs.</p>
+
+<h2 id="github">2. GitHub — source of truth</h2>
+
+<p>All code lives in <strong>200+ private GitHub repositories</strong> under one personal
+   account. Repositories are split across several broad domains:</p>
+
+<table>
+  <thead><tr><th>Domain</th><th>Examples</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td>Health AI</td>
+        <td>expandhealthai, expandhealthio, expandhealthsa-full-website,
+            dawa-ai, ilara-emr, ilara-health-brain, ilarahealth-tech,
+            healthspansite, expand-health-brain</td>
+        <td>The flagship product line. <code>expandhealthai</code> is the most heavily instrumented repo.</td></tr>
+    <tr><td>Productivity / automation</td>
+        <td>linkedin-automation, whatsapp-analyzer, podcast-summarizer,
+            gmail-organizer, seo-audit-tool, marketing,
+            email-analysis, business-opportunities</td>
+        <td>Daily-use Python and Node automations, mostly Railway-hosted.</td></tr>
+    <tr><td>Real estate &amp; finance</td>
+        <td>the-valor, the-valour-unit-308, investec-documents, accounting-system,
+            invoicing-system, cigna-refunds, property-calendar-sync</td>
+        <td>Mix of legal-doc repositories and live financial tools.</td></tr>
+    <tr><td>Personal &amp; content</td>
+        <td>emilian-pa, emilianpopa, emilianpopa-com, emilians-newsletter,
+            mindvalley-ai-mastery-students, claude-coding-101, VolkswagenCalifornia</td>
+        <td>The personal hub plus public-facing content sites.</td></tr>
+    <tr><td>Infrastructure / dev environment</td>
+        <td>cloud-dev-environment, infrastructure, ilara-kenyaemr-terraform</td>
+        <td>Terraform / HCL — the cloud dev workspace template lives here.</td></tr>
+    <tr><td>Mirrored Ilara org</td>
+        <td>~150 repos prefixed <code>ilara-*</code></td>
+        <td>Full Ilara Health source tree mirrored under the personal account for offline access &amp; analysis.</td></tr>
+  </tbody>
+</table>
+
+<h3>GitHub conventions</h3>
+<ul>
+  <li><strong>Branching:</strong> <code>feature/* → staging → main</code>. Direct PRs to
+      <code>main</code> are blocked by an automated check (see §4).</li>
+  <li><strong>Commits:</strong> all commits Co-Authored by Claude are tagged
+      <code>Co-Authored-By: Claude &lt;noreply@anthropic.com&gt;</code> — provides a clean audit
+      trail of human vs AI contribution.</li>
+  <li><strong>Secrets:</strong> stored in GitHub Secrets at the repo level. Long-lived tokens
+      (Railway, Backblaze B2, OpenAI, Anthropic, OAuth) are scoped to the smallest possible workflow.</li>
+  <li><strong>Visibility:</strong> all repos are private by default. A handful of education /
+      open-source repos (<code>claude-coding-101</code>, <code>ExpandCoffee</code>,
+      <code>HEALF</code>) are explicitly public.</li>
+</ul>
+
+<h2 id="cloud-dev">3. Cloud development environment</h2>
+
+<p>A self-hosted, single-server developer cloud designed so that any project — no matter where —
+   can spin up a fresh, identical workspace in ~90 seconds. The whole thing is built on
+   open-source bricks, runs on one Hetzner box, and costs about <strong>€18 / month all-in</strong>.</p>
+
+<div class="panel">
+<h4>Architecture</h4>
+<div class="flow">
+┌─ Hetzner CX42 (8 vCPU / 16 GB RAM / Ubuntu 24.04) ────────────┐
+│                                                                │
+│   PostgreSQL ──┐                                               │
+│   (Docker)     │                                               │
+│                ▼                                               │
+│             Coder server  ──── creates ───►  workspaces        │
+│             (port 3000)                       (one per repo)   │
+│                  │                                             │
+│                  │ accessible only over Tailscale VPN          │
+│                  ▼                                             │
+│             code-server (VS Code in browser)                   │
+│             + tmux + Claude Code installed per workspace       │
+│                                                                │
+│   Self-hosted GitHub Actions runner (free CI minutes)          │
+└────────────────────────────────────────────────────────────────┘
+</div>
+</div>
+
+<h3>What's in the box</h3>
+<ul>
+  <li><strong>Coder</strong> — workspace orchestrator. One Terraform template
+      (<code>cloud-dev-environment</code> repo) serves every project; per-project config
+      lives in each repo's <code>.devcontainer/devcontainer.json</code>.</li>
+  <li><strong>Tailscale VPN</strong> — Coder dashboard and SSH are not exposed to the public internet.
+      Only devices on the tailnet can reach them.</li>
+  <li><strong>Claude Code in every workspace</strong> — installed automatically with
+      shared <code>~/.claude/</code> config (skills, settings, global CLAUDE.md) synced via a
+      dotfiles repo.</li>
+  <li><strong>Persistent volumes</strong> — code, <code>.env</code> files, and settings survive
+      workspace restarts and template upgrades.</li>
+  <li><strong>tmux sessions</strong> — long-running Claude Code sessions survive SSH disconnects.</li>
+  <li><strong>Self-hosted GitHub Actions runner</strong> — runs on the same Hetzner box;
+      <strong>€0 CI minutes</strong> on every repo wired up to it.</li>
+  <li><strong>Hardening</strong> — Tailscale-only access, SSH key auth only, <code>ufw</code> firewall,
+      automatic Ubuntu security updates.</li>
+</ul>
+
+<h3>Onboarding a new project</h3>
+<pre>coder create myproject --template devcontainer
+# 90 seconds later: VS Code in browser, repo cloned, Claude Code logged in</pre>
+
+<h2 id="cicd">4. CI / CD pipeline architecture</h2>
+
+<p>The flagship implementation lives in <code>expandhealthai</code>. It runs <strong>11 distinct
+   GitHub Actions workflows</strong> covering every stage from PR open to monthly disaster-recovery
+   drills. Other production repos (<code>linkedin-automation</code>,
+   <code>whatsapp-analyzer</code>, <code>dawa-ai</code>) use a lighter subset of the same pattern.</p>
+
+<h3>Branching &amp; promotion flow</h3>
+<div class="flow">
+feature/xxx ─► PR into staging ─► auto-checks ─► QA on staging ─► "Promote to Production" ─► main ─► Railway deploy
+</div>
+<p>This flow is enforced — not just documented:</p>
+<ul>
+  <li><code>pr-target-check.yml</code> blocks any PR that targets <code>main</code> directly
+      (except the staging→main promotion). It posts a comment explaining the workflow and fails the check.</li>
+  <li><code>promote-to-production.yml</code> is a manual <code>workflow_dispatch</code> that
+      requires the operator to type the literal string <code>promote</code>, verifies they're on
+      the staging branch, re-runs all pre-deploy checks, and then force-syncs <code>main</code> to staging.</li>
+</ul>
+
+<h3>The 11 workflows on the flagship repo</h3>
+<table>
+  <thead><tr><th>Workflow</th><th>Trigger</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr><td><code>pr-review.yml</code></td><td>on PR</td>
+        <td>Lint + syntax check + smoke test + frontend tests + npm audit + auto PR-stats comment</td></tr>
+    <tr><td><code>pr-safety-guards.yml</code></td><td>on PR → staging</td>
+        <td>File-deletion guard (blocks PRs deleting &gt;10 files), pre-merge syntax/smoke, PR description lint (must have summary + test plan)</td></tr>
+    <tr><td><code>pr-target-check.yml</code></td><td>on PR → main</td>
+        <td>Blocks direct PRs to main; enforces staging-first workflow</td></tr>
+    <tr><td><code>staging-checks.yml</code></td><td>push → staging</td>
+        <td>Lint, test, smoke, migration idempotency lint, require()-resolution check, npm audit, deploy summary in GitHub UI</td></tr>
+    <tr><td><code>promote-to-production.yml</code></td><td>manual</td>
+        <td>Two-factor (typed-confirmation + branch check) sync of staging → main, triggering Railway production deploy</td></tr>
+    <tr><td><code>security.yml</code></td><td>push to main + weekly cron</td>
+        <td>npm audit (critical), TruffleHog secret scan, ESLint security ruleset</td></tr>
+    <tr><td><code>dependency-review.yml</code></td><td>on PR touching package*.json</td>
+        <td>npm audit (high+critical) — gates dependency upgrades</td></tr>
+    <tr><td><code>dast-scan.yml</code></td><td>weekly cron + manual</td>
+        <td>OWASP ZAP baseline (and on-demand full) DAST scan against staging</td></tr>
+    <tr><td><code>daily-backup.yml</code></td><td>daily 02:00 UTC</td>
+        <td>pg_dump → Backblaze B2 + verify backup is &lt;1 day old + auto-fail notification</td></tr>
+    <tr><td><code>backup-retention-cleanup.yml</code></td><td>weekly Sun 04:00 UTC</td>
+        <td>Enforce 90-day retention on the B2 bucket; supports dry-run</td></tr>
+    <tr><td><code>monthly-restore-test.yml</code></td><td>monthly 03:00 UTC</td>
+        <td>Spin up a Postgres 17 service container, pull the latest backup from B2, restore it, run integrity checks; results retained 90 days</td></tr>
+  </tbody>
+</table>
+
+<h3>The lighter pattern (linkedin-automation, etc.)</h3>
+<ul>
+  <li><code>ci.yml</code> — ruff lint + pytest with coverage gate + bandit (Python security linter) + auto PR-stats comment</li>
+  <li><code>security.yml</code> — pip-audit (dependency vulnerabilities) + TruffleHog secret scan + bandit, on push and weekly cron</li>
+  <li><code>dependency-review.yml</code> — gates dependency upgrades</li>
+  <li><code>pr-target-check.yml</code> + <code>staging-checks.yml</code> + <code>promote-to-production.yml</code> — same staging-first promotion pattern</li>
+</ul>
+
+<h2 id="qa">5. Quality assurance, branch protection &amp; PR safety guards</h2>
+
+<h3>Branch protection rules (the GitHub-side enforcement)</h3>
+
+<p>The workflows in §4 only matter because GitHub is configured to <em>require</em> them.
+   On <code>expandhealthai</code>, both protected branches have explicit required-status-check
+   lists tied directly to workflow job names — if a check is missing or red, the merge button
+   stays disabled.</p>
+
+<table>
+  <thead><tr><th>Branch</th><th>Required status checks</th><th>Other rules</th></tr></thead>
+  <tbody>
+    <tr><td><code>main</code></td>
+        <td><code>Lint and Test</code>, <code>Security Scan</code>, <code>PR Target Branch Check</code></td>
+        <td>strict (must be up-to-date with base before merging); force pushes allowed (needed for the staging→main promotion); deletions blocked</td></tr>
+    <tr><td><code>staging</code></td>
+        <td><code>Lint and Test</code>, <code>Security Scan</code>, <code>File Deletion Guard</code>, <code>Pre-merge Syntax and Smoke</code>, <code>PR Description Lint</code></td>
+        <td>strict; force pushes blocked; stale reviews automatically dismissed; required reviewer count = 0 (you're the only committer, so review enforcement is via the bots above)</td></tr>
+  </tbody>
+</table>
+
+<p class="meta">Other Python repos (<code>linkedin-automation</code>, <code>dawa-ai</code>) currently
+   run the same workflows but without branch protection rules attached — meaning the checks run
+   informationally but don't block merges. Worth promoting to required checks once the bots are
+   stable.</p>
+
+<h3>Pre-merge code-quality gates (run by the workflows above)</h3>
+
+<p>QA is enforced at the workflow level, not by convention. Each PR has to pass several
+   independent gates before it can land on staging, and another set before it can be promoted.</p>
+
+<ul>
+  <li><strong>Syntax validity</strong> — every <code>.js</code> file in <code>api/</code> is parsed via <code>node --check</code></li>
+  <li><strong>require() resolution</strong> — a custom <code>check-requires.js</code> walks every <code>require()</code> target and fails if any can't resolve</li>
+  <li><strong>Smoke test</strong> — a custom <code>smoke-test.js</code> tries to load every module to catch import-time errors</li>
+  <li><strong>Migration idempotency lint</strong> — a custom <code>lint-migrations.js</code> guards against migrations that aren't safe to re-run</li>
+  <li><strong>Frontend tests</strong> — <code>npm run test:frontend</code></li>
+  <li><strong>Linters</strong> — ESLint (Node), ruff (Python), with security rule sets enabled</li>
+</ul>
+
+<h3>PR safety guards (the "no surprises" rules)</h3>
+<div class="panel">
+<h4>File-deletion guard</h4>
+<p>Any PR that deletes more than <strong>10 files</strong> is automatically blocked. The check
+   posts a comment explaining the historical incident (PR #1235 — a stale base branch silently
+   dropped files added on staging in the meantime) and tells the author exactly how to rebase.
+   Intentional deletions can be opted in with <code>[allow-mass-delete]</code> in the PR body.</p>
+</div>
+
+<div class="panel">
+<h4>PR description lint</h4>
+<p>Before a PR can pass, the description must be at least 50 characters and contain a
+   <em>Test Plan</em> section. Otherwise the bot posts a comment with the suggested format
+   and fails the check. Forces every change — even one-liners — to come with intent and verification.</p>
+</div>
+
+<div class="panel">
+<h4>Target-branch guard</h4>
+<p>PRs against <code>main</code> are blocked unless they originate from <code>staging</code>.
+   The bot comment explains the staging-first workflow, gives the exact <code>gh pr create</code>
+   command to retarget, and notes the emergency-hotfix escape hatch.</p>
+</div>
+
+<h3>Promotion gates</h3>
+<ul>
+  <li>Two-factor manual confirmation: type the literal string <code>promote</code></li>
+  <li>Branch verification: workflow must be running from <code>staging</code></li>
+  <li>Re-runs the full lint + syntax + npm audit suite against the staging tip</li>
+  <li>Only then does it force-push staging → main, which is what triggers the Railway deploy</li>
+</ul>
+
+<h2 id="security">6. Security &amp; vulnerability scanning</h2>
+
+<p>The security stack is intentionally a portfolio of best-of-breed open tools rather than a
+   single all-in-one product like Snyk. Every layer of the SDLC has at least one scanner:</p>
+
+<table>
+  <thead><tr><th>Layer</th><th>Tool</th><th>Cadence</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td>Dependencies (Node)</td><td><code>npm audit</code></td>
+        <td>Every PR + every push + weekly</td>
+        <td><code>--audit-level=critical</code> on PR, <code>=high</code> on dependency-touching PRs</td></tr>
+    <tr><td>Dependencies (Python)</td><td><code>pip-audit</code></td>
+        <td>Every push to master + weekly</td>
+        <td>Reads <code>requirements.txt</code> directly</td></tr>
+    <tr><td>Dependency policy</td><td>GitHub <em>Dependency Review</em> action</td>
+        <td>Every PR touching <code>package*.json</code></td>
+        <td>Blocks vulnerable upgrades before they merge</td></tr>
+    <tr><td>Auto-upgrade PRs</td><td><strong>Dependabot</strong> (npm + pip + github-actions)</td>
+        <td>Weekly Monday</td>
+        <td>Grouped minor/patch updates, auto-labels <code>security</code> + <code>tech-debt</code>, targets <code>staging</code>, you're auto-assigned reviewer</td></tr>
+    <tr><td>Native CVE alerts</td><td>GitHub Dependabot Security Alerts</td>
+        <td>Always on</td>
+        <td>Surfaces in repo Security tab + email when a CVE matches your lockfile</td></tr>
+    <tr><td>Static analysis (Node)</td><td>ESLint w/ security ruleset</td>
+        <td>Every PR + push + weekly</td>
+        <td>Scans <code>server.js</code>, <code>api/**</code>, <code>services/**</code>, <code>middleware/**</code>, <code>database/**</code></td></tr>
+    <tr><td>Static analysis (Python)</td><td><code>bandit</code></td>
+        <td>Every PR + push + weekly</td>
+        <td>JSON report uploaded as artifact for 30 days</td></tr>
+    <tr><td>Secret scanning</td><td>TruffleHog (<code>--only-verified</code>)</td>
+        <td>Every push + weekly</td>
+        <td>Pinned to a specific commit SHA; scans the diff range only on push</td></tr>
+    <tr><td>DAST (running app)</td><td>OWASP ZAP — baseline + full</td>
+        <td>Weekly + manual</td>
+        <td>Targets the staging URL; opens GitHub issues automatically; HTML report retained 30 days</td></tr>
+    <tr><td>Network &amp; access</td><td>Tailscale + ufw + SSH-key-only</td>
+        <td>Always</td>
+        <td>Coder dashboard, dev workspaces, and SSH all hidden behind the tailnet</td></tr>
+    <tr><td>OS hardening</td><td>Ubuntu unattended-upgrades</td>
+        <td>Daily</td>
+        <td>Hetzner box auto-patches security updates</td></tr>
+  </tbody>
+</table>
+
+<p class="meta">Note on Snyk: the user does <em>not</em> currently run Snyk. The functional equivalent
+  is the matrix above — npm audit + pip-audit + GitHub Dependency Review for SCA, ESLint-security
+  + bandit for SAST, OWASP ZAP for DAST, and TruffleHog for secrets. Snyk would primarily
+  consolidate the SCA piece into a single dashboard with prioritized fix PRs.</p>
+
+<h2 id="backup">7. Backups &amp; disaster recovery</h2>
+
+<p>The backup story is the part most teams skip. Here it's a three-workflow pipeline so the
+   recovery position is provable, not aspirational.</p>
+
+<div class="panel">
+<h4>Daily backup (<code>daily-backup.yml</code>)</h4>
+<ul>
+  <li>Runs at <strong>02:00 UTC every day</strong></li>
+  <li>Installs PostgreSQL 17 client, then runs <code>pg_dump</code> against the production database</li>
+  <li>Uploads the dump to a Backblaze B2 bucket (<code>expandhealth-backups</code>) via the official B2 CLI</li>
+  <li>Records bucket stats (total backup count, latest filename) to the GitHub job summary</li>
+  <li>Has a dedicated <em>verify-backup-age</em> job that runs after success: parses the latest filename, computes the age in days, and warns if &gt;1 day old</li>
+  <li>Failure path posts an <code>::error::</code> annotation and a <em>Backup Failed</em> summary that GitHub watchers receive as email</li>
+</ul>
+</div>
+
+<div class="panel">
+<h4>Retention cleanup (<code>backup-retention-cleanup.yml</code>)</h4>
+<ul>
+  <li>Runs every <strong>Sunday 04:00 UTC</strong></li>
+  <li>Enforces a <strong>90-day retention</strong> on the B2 bucket via a custom Node script</li>
+  <li>Supports a <code>dry_run</code> input so cleanup runs can be previewed before execution</li>
+  <li>Failure path posts a dedicated <em>Retention Cleanup Failed</em> summary</li>
+</ul>
+</div>
+
+<div class="panel">
+<h4>Monthly restore test (<code>monthly-restore-test.yml</code>)</h4>
+<ul>
+  <li>Runs on the <strong>1st of every month at 03:00 UTC</strong> — the only thing that proves backups actually work</li>
+  <li>Spins up a Postgres 17 service container inside the runner</li>
+  <li>Pulls the latest backup from B2, restores it into the ephemeral DB, runs integrity checks via <code>scripts/restore-test.sh</code></li>
+  <li>Validates the optional <code>backup_file</code> input against a strict regex (<code>backup-YYYY-MM-DD-HHMMSS.sql.gz</code>) to prevent injection</li>
+  <li>Test results uploaded as a 90-day-retained artifact</li>
+  <li>Failure path posts a dedicated <em>Monthly Restore Test FAILED</em> summary with explicit "investigate immediately" wording</li>
+</ul>
+</div>
+
+<h2 id="sentry">8. Error monitoring (Sentry)</h2>
+
+<p>Sentry is the runtime error / exception monitor for the production app. It's wired into
+   <code>expandhealthai</code> using the official <code>@sentry/node ^10.38.0</code> SDK and
+   integrated with the Express server in a <strong>HIPAA-aware way</strong> — every event payload
+   is scrubbed of PII before it leaves the box.</p>
+
+<h3>Where it lives</h3>
+<ul>
+  <li><strong>Initialized first thing in <code>server.js</code></strong> (lines 9–39) — before any other
+      import, gated on <code>SENTRY_DSN</code> being present so dev environments without a DSN don't
+      get instrumented.</li>
+  <li><strong>Express error handler</strong> — <code>Sentry.setupExpressErrorHandler(app)</code> at
+      line 2506 sits ahead of the custom error handler so unhandled exceptions are captured first.</li>
+  <li><strong>Health endpoint</strong> — <code>api/monitoring.js</code> exposes
+      <code>{ sentry: !!process.env.SENTRY_DSN }</code> so you can verify from outside whether
+      Sentry is wired up on a given environment.</li>
+  <li><strong>Graceful shutdown</strong> — on SIGTERM the server calls
+      <code>await Sentry.close(2000)</code> to flush in-flight events before exit.</li>
+</ul>
+
+<h3>HIPAA configuration (the part that matters)</h3>
+
+<p>Because the app handles clinical data, the Sentry init explicitly disables PII pass-through
+   and runs every event through a custom <code>scrubPHI()</code> function:</p>
+
+<pre>Sentry.init({
+  dsn: process.env.SENTRY_DSN,
+  environment: process.env.NODE_ENV || 'development',
+  tracesSampleRate: 0.1,            // 10% transaction sampling
+  sendDefaultPii: false,            // never send IPs / cookies / headers by default
+  beforeSend: scrubPHI,             // run scrub on every error event
+  beforeSendTransaction: scrubPHI,  // and on every performance trace
+});
+
+function scrubPHI(event) {
+  // Strip auth + cookies from headers
+  delete event.request?.headers?.authorization;
+  delete event.request?.headers?.cookie;
+  // Redact request body, query string, cookies wholesale
+  if (event.request?.data)         event.request.data = '[REDACTED]';
+  if (event.request?.query_string) event.request.query_string = '[REDACTED]';
+  if (event.request?.cookies)      event.request.cookies = '[REDACTED]';
+  return event;
+}</pre>
+
+<h3>Why you get Sentry emails</h3>
+
+<p>Sentry sends an alert email any time it sees a new error <em>signature</em> (or a regression
+   of a previously-resolved one) on the production environment. With <code>tracesSampleRate: 0.1</code>
+   you also get performance regression alerts on the slowest 10% of transactions. The emails come
+   from <code>noreply@sentry.io</code>; in the GitHub world, the equivalent failures show up as
+   <em>workflow run failed</em> emails (different bot).</p>
+
+<h3>Other Sentry touch points</h3>
+<ul>
+  <li><code>linkedin-automation</code>'s <code>ci.yml</code> sets <code>SENTRY_DSN: ""</code> for tests
+      to silence the SDK during pytest runs — implies a Sentry DSN exists in production env vars
+      but isn't checked into the repo.</li>
+  <li><code>accounting-system/prisma/seed.ts</code> references Sentry — likely the seed data includes
+      a sample Sentry integration / billing reminder. Lower priority.</li>
+  <li>The <code>~/Projects/emilian-pa/calendar/</code> ICS file <code>sentry-payg-reminder.ics</code>
+      is your personal recurring reminder for the Sentry pay-as-you-go billing — not in-app
+      monitoring.</li>
+</ul>
+
+<p class="meta">Plan / TODO: Sentry is on PAYG and not currently surfacing into PR checks or
+  GitHub status — adding a Sentry release notification step on Railway deploys would close that loop.</p>
+
+<h2 id="railway">9. Railway — production hosting</h2>
+
+<p>Railway is the default deploy target for everything that needs to be running. Push to
+   <code>main</code> (or <code>master</code>), Railway picks it up automatically — there is
+   <strong>no manual deploy step</strong> and the <code>railway up</code> CLI is intentionally
+   never used (per <code>~/CLAUDE.md</code>).</p>
+
+<h3>Production projects on Railway (40+)</h3>
+<table>
+  <thead><tr><th>Project</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td>ExpandHealth SA website</td><td>Public marketing site for Expand Health South Africa</td></tr>
+    <tr><td>expandhealth-ai-copilot</td><td>The flagship clinician copilot app — has a separate <em>expandhealth-staging</em> environment</td></tr>
+    <tr><td>expandhealthio / expandhealthio-website</td><td>Marketing &amp; assets for expandhealth.io</td></tr>
+    <tr><td>longevity_academy</td><td>Longevity Academy LMS</td></tr>
+    <tr><td>dawa-ai</td><td>WhatsApp-native clinical decision support for Africa</td></tr>
+    <tr><td>ilara-emr / Ilara Health Tech</td><td>Hosted Ilara Health components</td></tr>
+    <tr><td>accounting-system / invoicing-system</td><td>Personal finance ops</td></tr>
+    <tr><td>whatsapp-analyzer</td><td>WhatsApp message scraper + daily Slack digest</td></tr>
+    <tr><td>linkedin-automation</td><td>AI LinkedIn posting tool with web review UI</td></tr>
+    <tr><td>podcast-summarizer</td><td>Self-hosted NotebookLM-style podcast → audio summary</td></tr>
+    <tr><td>seo-audit-tool</td><td>Programmatic SEO auditor + PDF reports</td></tr>
+    <tr><td>property-calendar-sync</td><td>Airbnb ↔ HomeExchange calendar sync</td></tr>
+    <tr><td>red-cell-therapy</td><td>Red light therapy landing page (Sanity CMS)</td></tr>
+    <tr><td>business-opportunities</td><td>Flask app for tracking opportunities</td></tr>
+    <tr><td>marketing</td><td>Marketing automations</td></tr>
+    <tr><td>men-vitality-labs</td><td>Brand site</td></tr>
+    <tr><td>bookmeet</td><td>Booking / meeting app</td></tr>
+    <tr><td>postpilot</td><td>Posting automation</td></tr>
+    <tr><td>whatsapp-customer-service</td><td>Public WhatsApp bot</td></tr>
+    <tr><td>healthspan</td><td>Healthspan tracker</td></tr>
+    <tr><td>lumicoat-content-hub</td><td>LumiCoat campaign content</td></tr>
+    <tr><td>Meta-Ads-Mastery / AI Mastery</td><td>Course delivery infrastructure</td></tr>
+    <tr><td>expand health brain</td><td>Internal knowledge base</td></tr>
+  </tbody>
+</table>
+<p class="meta">Plus a series of Railway-default-named projects (<em>grateful-cat,
+  hopeful-blessing, complex-scissors, seemly-sea, puzzling-yard, lethal-zinc,
+  highfalutin-scene, terrific-grain, gas-feeling, graceful-berry, capable-strength,
+  reasonable-ambition, accurate-determination</em>) used as scratch / staging environments.</p>
+
+<h3>Per-project Railway config files</h3>
+<p>Each Railway-deployed repo carries its own <code>railway.toml</code> /
+   <code>railway.json</code> + optional <code>nixpacks.toml</code>. Confirmed in:
+   <code>dawa-ai</code>, <code>expandhealthio</code>, <code>linkedin-automation</code>,
+   <code>property-calendar-sync</code>, <code>podcast-summarizer</code>,
+   <code>invoicing-system</code>, <code>whatsapp-analyzer</code>, <code>red-cell-therapy</code>,
+   <code>healthspansite</code>, <code>ilarahealth-tech</code>, <code>business-opportunities</code>,
+   <code>accounting-system</code>, <code>seo-audit-tool</code>, <code>ilara-emr</code>,
+   <code>ilara-health-brain</code>.</p>
+
+<h2 id="claude">10. Autonomous Claude integrations</h2>
+
+<p>Claude Code is wired into several repos as both an automatic reviewer and an on-demand
+   collaborator. The integration uses the official <code>anthropics/claude-code-action@v1</code>
+   GitHub Action and runs on the self-hosted Hetzner runner (so it consumes <strong>zero
+   GitHub Actions minutes</strong>).</p>
+
+<h3>Two patterns in production</h3>
+
+<div class="panel">
+<h4>1. Automatic PR reviewer (<code>code-review.yml</code>)</h4>
+<p>Triggers on every <code>opened / synchronize / reopened</code> PR. Checks out the full
+   history, runs the Claude Code action with model <code>claude-sonnet-4-6</code>, and posts
+   a review focused on correctness, security, and clarity. Per-project guidance comes from
+   each repo's <code>CLAUDE.md</code>. Live in: <code>dawa-ai</code>,
+   <code>whatsapp-analyzer</code>, and via <code>pr-review.yml</code> in <code>expandhealthai</code>.</p>
+</div>
+
+<div class="panel">
+<h4>2. <code>@claude</code> mention helper (<code>claude-pr.yml</code>)</h4>
+<p>Triggered by any PR / issue / review comment containing <code>@claude</code>. Runs the
+   same action with read access to contents, PRs, issues, and actions logs. Lets you converse
+   with Claude directly from the GitHub UI to dig into a PR, ask for fixes, or pull failing
+   logs. Live in: <code>dawa-ai</code>, <code>whatsapp-analyzer</code>.</p>
+</div>
+
+<div class="panel">
+<h4>3. Issue helper (<code>claude-issue.yml</code>)</h4>
+<p>Variant of the above wired into issue events — lets Claude pick up an issue and propose
+   work autonomously when it's mentioned.</p>
+</div>
+
+<h2 id="bots">11. Bots, emails &amp; why "PR Review" keeps failing right now</h2>
+
+<div class="panel warn">
+<h4>The actual reason your inbox is full of "PR Review" failure mails (verified 2026-04-10)</h4>
+<p>I pulled the last 15 PR Review runs on <code>expandhealthai</code> — the workflow has been
+   failing on <em>every PR for the past day</em>. The failure isn't a configuration bug. It's
+   the <code>Security Scan</code> job correctly catching <strong>two real CVEs in the lockfile</strong>:</p>
+<ul>
+  <li><code>axios &lt;1.15.0</code> — <strong>CRITICAL</strong> — NO_PROXY hostname normalization bypass leading to SSRF
+      (<a href="https://github.com/advisories/GHSA-3p68-rc4w-qgx5">GHSA-3p68-rc4w-qgx5</a>)</li>
+  <li><code>lodash &lt;=4.17.23</code> — <strong>HIGH</strong> — code injection in <code>_.template</code> +
+      prototype pollution in <code>_.unset</code>/<code>_.omit</code>
+      (<a href="https://github.com/advisories/GHSA-r5fr-rjxr-66jc">GHSA-r5fr-rjxr-66jc</a>,
+      <a href="https://github.com/advisories/GHSA-f23m-r3pf-42rh">GHSA-f23m-r3pf-42rh</a>)</li>
+</ul>
+<p><strong>Fix:</strong></p>
+<pre>cd ~/Projects/expandhealthai/demo/expand-health/v2
+npm audit fix
+git add package.json package-lock.json
+git commit -m "Bump axios + lodash to patch GHSA-3p68-rc4w-qgx5 + GHSA-r5fr-rjxr-66jc"
+git push</pre>
+<p>Once that lands, every subsequent PR will go green again. The system is working — it's
+   refusing to merge anything until you patch the underlying issue. Dependabot would have
+   caught this on the next Monday cycle anyway, but the CVEs are critical enough that the
+   gating is doing exactly what you set it up to do.</p>
+</div>
+
+<p>This is the complete list of automated agents running across the production repos. Every line item below either opens a PR, posts a comment,
+   files an issue, or sends a failure email. Knowing which is which makes it easy to mute the
+   noisy ones and act on the important ones.</p>
+
+<h3>The eight bot voices in your inbox</h3>
+
+<table>
+  <thead><tr><th>#</th><th>Bot / source</th><th>What it does</th><th>Notifies you when</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td><strong>Claude Code Reviewer</strong><br><code>code-review.yml</code> + <code>pr-review.yml</code></td>
+        <td>Anthropic's <code>claude-code-action@v1</code> running on the self-hosted Hetzner runner. Reviews every <code>opened / synchronize / reopened</code> PR with model <code>claude-sonnet-4-6</code>. Posts inline review comments + a summary, focused on correctness, security, and clarity. Reads each repo's <code>CLAUDE.md</code> for project-specific guidance.</td>
+        <td>Every PR opened or pushed to. Live in: <code>dawa-ai</code>, <code>whatsapp-analyzer</code>, <code>expandhealthai</code>.</td></tr>
+    <tr><td>2</td><td><strong>Claude @mention helper</strong><br><code>claude-pr.yml</code></td>
+        <td>The same action, triggered by any PR / issue / review comment containing <code>@claude</code>. Lets you converse with Claude inside the GitHub UI — "explain this regression", "rewrite this test", "pull the failing logs" — without leaving the browser.</td>
+        <td>Whenever someone (you, usually) writes <code>@claude</code> in a comment.</td></tr>
+    <tr><td>3</td><td><strong>Dependabot</strong><br><code>.github/dependabot.yml</code></td>
+        <td>GitHub's native bot. Opens PRs against <code>staging</code> for vulnerable / outdated dependencies. Configured for both ecosystems (<code>npm</code> on expandhealthai, <code>pip</code> on linkedin-automation) <em>and</em> <code>github-actions</code>. Minor + patch updates are <strong>grouped</strong> into single PRs to cut noise. Auto-labels: <code>security</code>, <code>tech-debt</code>. Auto-assigns you as reviewer. Limit: 10 npm/pip PRs + 5 actions PRs open at once.</td>
+        <td><strong>Every Monday</strong> — this is the biggest single source of "bot mail".</td></tr>
+    <tr><td>4</td><td><strong>GitHub Dependabot Security Alerts</strong></td>
+        <td>Separate from the PRs above — these are GitHub's native security alerts that fire as soon as a CVE is published affecting one of your dependencies. They show up in the Security tab and email you.</td>
+        <td>Whenever a new CVE matches your <code>package-lock.json</code> / <code>requirements.txt</code>.</td></tr>
+    <tr><td>5</td><td><strong>npm audit / pip-audit / bandit / ESLint-security</strong><br><code>security.yml</code> + <code>pr-review.yml</code> + <code>staging-checks.yml</code> + <code>ci.yml</code></td>
+        <td>Run on every PR, every push to main/master, and on a weekly Monday cron. Failures appear as failed checks (red X on the PR) and as GitHub Action emails.</td>
+        <td>On any PR, push, or weekly run that finds a high/critical issue.</td></tr>
+    <tr><td>6</td><td><strong>TruffleHog secret scan</strong><br><code>security.yml</code></td>
+        <td>Scans the diff range of every push for verified secrets (real API keys / tokens, not regex matches). Pinned to a specific commit SHA. <code>--only-verified</code> means false positives are near-zero.</td>
+        <td>Any push that introduces a real secret. If it ever fires — drop everything.</td></tr>
+    <tr><td>7</td><td><strong>OWASP ZAP DAST scan</strong><br><code>dast-scan.yml</code></td>
+        <td>Hits the staging URL every Monday with a baseline scan (and on demand with a full scan). Auto-files a GitHub <em>issue</em> for each new finding via <code>allow_issue_writing: true</code>. HTML report uploaded as a 30-day artifact.</td>
+        <td>Weekly Monday at 03:00 UTC, plus whenever ZAP finds something new (issue email).</td></tr>
+    <tr><td>8</td><td><strong>PR safety guard bots</strong><br><code>pr-safety-guards.yml</code> + <code>pr-target-check.yml</code></td>
+        <td>Three guardrails that comment-and-fail on PRs: file-deletion guard (&gt;10 deleted files), PR description lint (must have summary + test plan), wrong target branch (PRs to <code>main</code> instead of <code>staging</code>). Each one posts a single comment with the fix, then fails the check.</td>
+        <td>When you (or Claude) opens a PR that violates one of the three rules.</td></tr>
+    <tr><td>9</td><td><strong>PR-stats commenter</strong><br><code>pr-review.yml</code> + <code>ci.yml</code></td>
+        <td>A small <code>actions/github-script</code> step that posts a single comment per PR with files-changed / lines-added / lines-deleted, plus an "Automated Checks" checklist.</td>
+        <td>Once per PR, on open.</td></tr>
+    <tr><td>10</td><td><strong>Backup &amp; restore failure alerts</strong><br><code>daily-backup.yml</code> + <code>backup-retention-cleanup.yml</code> + <code>monthly-restore-test.yml</code></td>
+        <td>Each of the three backup workflows has a dedicated <code>notify-failure</code> job that runs on <code>if: failure()</code>, prints an <code>::error::</code> annotation, and writes a failure summary. GitHub watchers receive these as email.</td>
+        <td><strong>Only on failure.</strong> Daily 02:00 (backup), weekly Sun 04:00 (cleanup), monthly 1st 03:00 (restore test).</td></tr>
+  </tbody>
+</table>
+
+<h3>How to triage the inbox</h3>
+<ul>
+  <li><strong>Always act on:</strong> TruffleHog, backup failures, restore-test failures, ZAP issues.</li>
+  <li><strong>Batch on Monday:</strong> Dependabot grouped PRs — they're already grouped to minor/patch so most can be bulk-merged after the staging checks pass.</li>
+  <li><strong>Read but don't reply to:</strong> Claude PR review comments — they're inline so you'll see them when you next look at the PR anyway.</li>
+  <li><strong>Mute candidate:</strong> the auto PR-stats commenter — informational, not actionable. If it's noisy, gate it on PRs &gt;X lines.</li>
+</ul>
+
+<h3>What this stack does <em>not</em> have (yet)</h3>
+<ul>
+  <li><strong>CodeRabbit / Greptile / Cursor Bugbot</strong> — third-party AI reviewers that some teams stack on top of the Claude reviewer. Not currently installed.</li>
+  <li><strong>CodeQL</strong> — GitHub's first-party SAST. Free for private repos. Could be added as a 12th workflow.</li>
+  <li><strong>CodeCov / Codacy</strong> — coverage trend tracking. Coverage is computed in <code>ci.yml</code> but not pushed anywhere central.</li>
+  <li><strong>Sentry / Better Stack alerts wired into GitHub</strong> — Sentry is on PAYG but not surfacing into PR checks.</li>
+</ul>
+
+<h2 id="skills">12. Skills system (cross-project) &amp; Babysitter</h2>
+
+<p>"Skills" are the unit of reusable, version-controlled know-how that Claude Code loads on
+   demand. A skill is a Markdown file describing <em>when to use a tool, how to use it, and
+   what to avoid</em>. The model picks up the skill by name and follows the instructions
+   verbatim — so a well-written skill is effectively a deterministic plugin you can hand
+   to any project.</p>
+
+<h3>Current state (what's actually in the repos)</h3>
+
+<table>
+  <thead><tr><th>Location</th><th>Skills present</th></tr></thead>
+  <tbody>
+    <tr><td><code>~/Projects/expandhealthai/.claude/skills/</code></td>
+        <td>5 skills:
+          <ul>
+            <li><code>expandhealth-cockpit-kpi.md</code></li>
+            <li><code>expandhealth-report-bilingual.md</code></li>
+            <li><code>expandhealth-report-iterate.md</code></li>
+            <li><code>expandhealth-section-add.md</code></li>
+            <li><code>n8n-mcp-api.md</code></li>
+          </ul>
+        </td></tr>
+    <tr><td><code>~/Projects/mindvalley-ai-mastery-students/.claude/skills/</code></td>
+        <td>1 skill: <code>n8n-mcp-api.md</code></td></tr>
+    <tr><td><code>~/.claude/skills/</code> (global)</td>
+        <td><span class="badge amber">not yet created</span> — this is the gap. Creating it makes any skill available in <em>every</em> project automatically.</td></tr>
+  </tbody>
+</table>
+
+<p class="meta">Note: <code>n8n-mcp-api.md</code> already exists in two projects, which is exactly the duplication
+  the cross-project setup eliminates.</p>
+
+<h3>Skill file shape</h3>
+<p>Each skill is a Markdown doc with a stable structure so Claude can parse it consistently:</p>
+<pre># Skill: &lt;Name&gt;
+
+## Overview
+One paragraph: what this skill does and when it earns its keep.
+
+## When to use this skill
+- Bullet list of trigger conditions
+
+## When NOT to use it
+- The opposite list — equally important
+
+## Tools / commands
+- Concrete commands, MCP tool names, or code snippets
+
+## Examples
+- Worked examples of the input → output
+</pre>
+
+<h3>Three patterns for cross-project sharing</h3>
+
+<div class="panel">
+<h4>Pattern A — Global folder (<code>~/.claude/skills/</code>)</h4>
+<p>Claude Code automatically loads skills from the user-level <code>~/.claude/skills/</code> directory
+   in every conversation, regardless of which project is open. <strong>Recommended starting point</strong>:</p>
+<pre>mkdir -p ~/.claude/skills
+mv ~/Projects/expandhealthai/.claude/skills/n8n-mcp-api.md ~/.claude/skills/
+ln -s ~/.claude/skills/n8n-mcp-api.md ~/Projects/expandhealthai/.claude/skills/n8n-mcp-api.md</pre>
+<p>Pros: zero infrastructure. Cons: not version-controlled unless you also git-init the folder.</p>
+</div>
+
+<div class="panel">
+<h4>Pattern B — Git repo + symlink (the <code>shared-claude-rules</code> pattern)</h4>
+<p>You already do this for cross-project rules — there's a <code>~/shared-claude-rules/</code> dir
+   referenced in your global <code>CLAUDE.md</code>. Same idea for skills: create
+   <code>~/shared-claude-rules/skills/</code>, push it as its own git repo, and symlink it into
+   <code>~/.claude/skills/</code>:</p>
+<pre>cd ~/shared-claude-rules
+mkdir skills
+git add skills && git commit -m "init shared skills"
+git push
+ln -s ~/shared-claude-rules/skills ~/.claude/skills</pre>
+<p>Pros: version-controlled, shareable across machines (and with collaborators), survives
+   reinstall. Cons: one extra step when adding a new skill (commit + push).</p>
+</div>
+
+<div class="panel">
+<h4>Pattern C — Babysitter plugin marketplace (<code>a5c-ai/babysitter</code>)</h4>
+<p>This is what Ido shared. <a href="https://github.com/a5c-ai/babysitter">github.com/a5c-ai/babysitter</a>
+   is a Claude Code plugin from a5c.ai (~536 stars at time of writing, MIT). It's described as:</p>
+<blockquote style="border-left: 3px solid #2c4a36; padding: 8px 14px; color: #b6f0c8; background: #112116; border-radius: 4px;">
+  "Babysitter enforces obedience to agentic workforces, enabling them to manage extremely complex
+  tasks and workflows through deterministic, hallucination-free self-orchestration. Define your
+  workflow in code — Babysitter enforces every step, ensures quality gates pass before progression,
+  requires human approval at breakpoints, and records every decision in an immutable journal."
+</blockquote>
+<p>It installs as a native Claude Code plugin via the marketplace and surfaces a <code>/skills</code>
+   command. After install, type <code>/skills</code> and a skill called <code>babysit</code> appears.
+   Install:</p>
+<pre>claude plugin marketplace add a5c-ai/babysitter
+claude plugin install --scope user babysitter@a5c.ai
+# restart Claude Code, then: /skills</pre>
+<p>Why it matters here:</p>
+<ul>
+  <li>It's a <strong>shared distribution channel</strong> for skills — other Claude Code users can
+      <code>plugin marketplace add</code> the same source and instantly get the same skills.</li>
+  <li>The "babysitter" angle adds <strong>workflow enforcement</strong> on top: every skill is a step
+      in a pipeline, the journal records every decision, breakpoints require human approval. This
+      is the Claude-side equivalent of the staging→main promotion rules in §4.</li>
+  <li>It supports the same plugin pattern across <strong>Claude Code, Codex CLI, Cursor, and Gemini
+      CLI</strong> — so a skill written once works in any of those harnesses.</li>
+  <li>It's actively maintained and the SDK ships on npm as <code>@a5c-ai/babysitter-sdk</code>.</li>
+</ul>
+</div>
+
+<h3>Recommended path forward</h3>
+<ol>
+  <li><strong>Today</strong>: create <code>~/.claude/skills/</code> (Pattern A) and move the
+      duplicated <code>n8n-mcp-api.md</code> there. Symlink it back into the two projects so nothing
+      breaks if you open them solo.</li>
+  <li><strong>This week</strong>: convert it into a git-tracked folder under <code>~/shared-claude-rules/skills/</code>
+      (Pattern B). Now the skills travel with you to the Hetzner dev box and any new machine.</li>
+  <li><strong>When you want to share with Rui / Ido / any other collaborator</strong>: install
+      Babysitter (Pattern C). It gives you a marketplace-style distribution + the workflow
+      enforcement layer on top. Anyone they hand the marketplace name to gets the same skills.</li>
+</ol>
+
+<h2 id="pa">13. Personal assistant hub (emilian-pa)</h2>
+
+<p>The <code>emilian-pa</code> repo is the orchestration layer — a personal assistant whose
+   "memory" survives across Claude sessions and whose tools cover the rest of the digital life.</p>
+
+<h3>What lives in there</h3>
+<ul>
+  <li><strong>Persistent memory</strong> — <code>~/.claude/projects/&lt;project&gt;/memory/MEMORY.md</code>
+      indexes a per-project memory store; auto-loaded into every Claude conversation. Cross-project
+      memory access is documented in <code>~/shared-claude-rules/project-map.md</code>.</li>
+  <li><strong>Identity &amp; persona files</strong> — <code>SOUL.md</code>, <code>IDENTITY.md</code>,
+      <code>HEARTBEAT.md</code>, <code>USER.md</code>, <code>AGENTS.md</code>, <code>TOOLS.md</code>,
+      <code>PA_SETUP.md</code> — define how the assistant behaves across all projects.</li>
+  <li><strong>Calendar layer</strong> — <code>calendar/</code> contains <code>.ics</code> files for
+      recurring events (weekly 24h fasts, monthly 48h fasts, AfroLongevity cohort cadence,
+      Sentry billing reminders, etc.) loaded into Google Calendar.</li>
+  <li><strong>Gmail layer</strong> — Python venv at <code>/Users/emilianpopa/calendar/</code> with
+      <code>gmail_all.py</code> for all four accounts (gmail, emilianpopa, expand, ilara) and
+      single-account <code>main.py</code> for the personal Gmail. OAuth tokens persisted locally.</li>
+  <li><strong>Scripts library</strong> (<code>scripts/</code>):
+    <ul>
+      <li><code>add_fasting_events.py</code> — generates ICS for fasting cadence</li>
+      <li><code>colorize_signatures.py</code> — auto-applies color signatures to legal PDFs</li>
+      <li><code>generate-claudia-report.js</code></li>
+      <li><code>local-attachment-receiver.js</code> — local HTTP receiver for Gmail attachments</li>
+      <li><code>seed-claudia-demo.js</code>, <code>upload-claudia-records.js</code></li>
+      <li><code>email/</code>, <code>ilara-sale/</code> sub-tools</li>
+    </ul>
+  </li>
+  <li><strong>Trackers</strong> — e.g. <code>tracker/</code> contains the Volkswagen California
+      shopping tracker (live HTML dashboard for the Norway August 2026 trip).</li>
+  <li><strong>Reminders / tasks / session-notes</strong> — directories the assistant writes into to
+      keep state between sessions.</li>
+  <li><strong>Setup guides</strong> (<code>docs/</code>):
+    <ul>
+      <li><code>cloud-dev-environment-setup.md</code> — full step-by-step for the Hetzner+Coder build</li>
+      <li><code>claude-memory-devrag-guide.md</code> — memory + DevRAG architecture</li>
+      <li><code>cross-project-memory-guide.md</code></li>
+      <li><code>longevity-d2c-analysis.md</code>, <code>cape-town-levies/</code></li>
+    </ul>
+  </li>
+</ul>
+
+<h2 id="stack">14. Technology &amp; vendor stack</h2>
+
+<table>
+  <thead><tr><th>Layer</th><th>Vendors / tools</th></tr></thead>
+  <tbody>
+    <tr><td>Source control</td><td>GitHub (private org-scoped account, 200+ repos)</td></tr>
+    <tr><td>CI / CD</td><td>GitHub Actions on a self-hosted Hetzner runner — €0 minutes</td></tr>
+    <tr><td>Production hosting</td><td>Railway (auto-deploy from <code>main</code>/<code>master</code>)</td></tr>
+    <tr><td>Dev environment</td><td>Hetzner CX42 + Coder + Tailscale + code-server</td></tr>
+    <tr><td>Database</td><td>PostgreSQL 17 (Railway-hosted in prod, Docker on the dev box)</td></tr>
+    <tr><td>Object storage / backups</td><td>Backblaze B2 (<code>expandhealth-backups</code> bucket)</td></tr>
+    <tr><td>Languages</td><td>JavaScript, TypeScript, Python, Java, Kotlin, Ruby, Shell, HCL/Terraform</td></tr>
+    <tr><td>Frameworks</td><td>Node/Express, Next.js, React, Flask, Sanity CMS</td></tr>
+    <tr><td>AI orchestration</td><td>Claude Code (Anthropic), Claude Code GitHub Action, Flowise (workflow builder, multiple Railway iterations)</td></tr>
+    <tr><td>Monitoring &amp; alerting</td><td>Sentry (PAYG), GitHub Actions notifications, custom failure-summary jobs</td></tr>
+    <tr><td>Networking</td><td>Tailscale VPN (zero-trust access to dev infra)</td></tr>
+    <tr><td>Auth / secrets</td><td>GitHub Secrets, Railway env vars, OAuth tokens stored locally for Gmail/Calendar</td></tr>
+    <tr><td>SAST</td><td>ESLint security ruleset, bandit (Python)</td></tr>
+    <tr><td>SCA</td><td>npm audit, pip-audit, GitHub Dependency Review</td></tr>
+    <tr><td>DAST</td><td>OWASP ZAP (baseline + full)</td></tr>
+    <tr><td>Secret scanning</td><td>TruffleHog (<code>--only-verified</code>)</td></tr>
+    <tr><td>Productivity glue</td><td>Gmail API (4 accounts), Google Calendar API, Slack webhooks, Playwright (Gmail bulk labeling)</td></tr>
+  </tbody>
+</table>
+
+<h3>What's deliberately <em>not</em> here</h3>
+<ul>
+  <li><strong>No Snyk / no Datadog / no New Relic</strong> — replaced by the open-source matrix above.</li>
+  <li><strong>No Kubernetes</strong> — Railway handles container orchestration; the dev box runs plain Docker.</li>
+  <li><strong>No paid CI minutes</strong> — self-hosted runner on Hetzner.</li>
+  <li><strong>No manual deploys</strong> — Railway auto-deploys from <code>main</code>; the <code>railway up</code> CLI is policy-banned.</li>
+  <li><strong>No public-internet dev infrastructure</strong> — Coder, SSH and the Hetzner box are all behind Tailscale.</li>
+</ul>
+
+<footer>
+  Generated for sharing. All numbers and workflow descriptions are pulled directly
+  from the live repositories under <code>~/Projects/</code> and the GitHub account at
+  the time of compilation.
+</footer>
+
+</div>
+</body>
+</html>
