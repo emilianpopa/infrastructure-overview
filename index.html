@@ -361,7 +361,7 @@ feature/xxx ─► PR into staging ─► auto-checks ─► QA on staging ─�
         <td>Surfaces in repo Security tab + email when a CVE matches your lockfile</td></tr>
     <tr><td>Commercial SCA</td><td><strong>Snyk</strong> (GitHub App, not workflow file)</td>
         <td>Every PR</td>
-        <td>Installed as a repo-level GitHub App on <code>expandhealthai</code> at minimum (org: <code>emilianpopa</code>). Posts a <code>security/snyk</code> status check via the Checks API. <strong>Coverage on other repos uncertain</strong> — `gh pr checks` doesn't surface a Snyk check on recent PRs from <code>linkedin-automation</code> or <code>whatsapp-analyzer</code>, but the user reports it's installed everywhere — possibly running in monitor-only mode. Verify at <code>app.snyk.io/org/emilianpopa/</code>.</td></tr>
+        <td>Installed as a repo-level GitHub App on <code>expandhealthai</code> ONLY (org: <code>emilianpopa</code>, dashboard at <a href="https://app.snyk.io/org/emilianpopa/">app.snyk.io/org/emilianpopa/</a>). The Snyk dashboard's "Targets" list shows exactly one repo. As of 2026-04-10 it's tracking <strong>0 critical / 145 high / 562 medium / 208 low</strong> findings — almost all from transitive dependencies. Posts <code>security/snyk (emilianpopa)</code> status check on every <code>expandhealthai</code> PR via the GitHub Checks API. <strong>Not yet installed on linkedin-automation, whatsapp-analyzer, or dawa-ai</strong> — see the <code>snyk-coderabbit-rollout</code> skill in §12 for how to add them.</td></tr>
     <tr><td>AI code review</td><td><strong>CodeRabbit</strong> (GitHub App)</td>
         <td>Every PR</td>
         <td>Second AI reviewer alongside the Claude reviewer — installed as a repo-level GitHub App on <code>expandhealthai</code>, <code>linkedin-automation</code>, <code>whatsapp-analyzer</code>. Posts a <code>CodeRabbit</code> status check via the Checks API. Both AI reviewers have to pass.</td></tr>
@@ -649,8 +649,8 @@ git push</pre>
         <td>Each of the three backup workflows has a dedicated <code>notify-failure</code> job that runs on <code>if: failure()</code>, prints an <code>::error::</code> annotation, and writes a failure summary. GitHub watchers receive these as email.</td>
         <td><strong>Only on failure.</strong> Daily 02:00 (backup), weekly Sun 04:00 (cleanup), monthly 1st 03:00 (restore test).</td></tr>
     <tr><td>11</td><td><strong>Snyk</strong> (GitHub App, not in <code>.github/workflows/</code>)</td>
-        <td>Commercial SCA — installed at the repo level on <code>expandhealthai</code> under the <code>emilianpopa</code> Snyk org. Scans every PR for vulnerable dependencies and posts a <code>security/snyk</code> status check via the Checks API. Findings are visible at <code>app.snyk.io/org/emilianpopa</code>.</td>
-        <td>Every PR. Confirmed live on PR #1488 (3 tests skipped, all passing).</td></tr>
+        <td>Commercial SCA — installed at the repo level on <code>expandhealthai</code> ONLY under the <code>emilianpopa</code> Snyk org. Scans every PR for vulnerable dependencies and posts a <code>security/snyk (emilianpopa)</code> status check. Findings (currently 0 critical / 145 high / 562 medium / 208 low) are visible at <code>app.snyk.io/org/emilianpopa/</code>. <strong>Not installed on linkedin-automation, whatsapp-analyzer, or dawa-ai</strong> — the Snyk dashboard shows only one Target.</td>
+        <td>Every PR on expandhealthai. Confirmed live on PR #1488 (3 tests skipped, all passing).</td></tr>
     <tr><td>12</td><td><strong>CodeRabbit</strong> (GitHub App, not in <code>.github/workflows/</code>)</td>
         <td>AI code reviewer — installed as a repo-level GitHub App on <code>expandhealthai</code>, <code>linkedin-automation</code>, <code>whatsapp-analyzer</code>. Posts inline review comments and a <code>CodeRabbit</code> status check. Sits alongside the Claude Code reviewer; both have to pass.</td>
         <td>Every PR. Confirmed on the 3 repos above (<code>dawa-ai</code> has zero PRs, can't verify).</td></tr>
@@ -888,7 +888,7 @@ allowed-tools: Read, Bash, Edit, Grep
       recurring events (weekly 24h fasts, monthly 48h fasts, AfroLongevity cohort cadence,
       Sentry billing reminders, etc.) loaded into Google Calendar.</li>
   <li><strong>Gmail layer</strong> — Python venv at <code>/Users/emilianpopa/calendar/</code> with
-      <code>gmail_all.py</code> for all four accounts (gmail, emilianpopa, expand, ilara) and
+      <code>gmail_all.py</code> (built 2026-04-10 — multi-account search/read CLI matching the CLAUDE.md contract) for all four accounts (gmail, emilianpopa, expand, ilara) and
       single-account <code>main.py</code> for the personal Gmail. OAuth tokens persisted locally.</li>
   <li><strong>Scripts library</strong> (<code>scripts/</code>):
     <ul>
