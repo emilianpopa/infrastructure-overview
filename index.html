@@ -361,7 +361,7 @@ feature/xxx ─► PR into staging ─► auto-checks ─► QA on staging ─�
         <td>Surfaces in repo Security tab + email when a CVE matches your lockfile</td></tr>
     <tr><td>Commercial SCA</td><td><strong>Snyk</strong> (GitHub App, not workflow file)</td>
         <td>Every PR</td>
-        <td>Installed as a repo-level GitHub App on <code>expandhealthai</code> ONLY (org: <code>emilianpopa</code>, dashboard at <a href="https://app.snyk.io/org/emilianpopa/">app.snyk.io/org/emilianpopa/</a>). The Snyk dashboard's "Targets" list shows exactly one repo. As of 2026-04-10 it's tracking <strong>0 critical / 145 high / 562 medium / 208 low</strong> findings — almost all from transitive dependencies. Posts <code>security/snyk (emilianpopa)</code> status check on every <code>expandhealthai</code> PR via the GitHub Checks API. <strong>Not yet installed on linkedin-automation, whatsapp-analyzer, or dawa-ai</strong> — see the <code>snyk-coderabbit-rollout</code> skill in §12 for how to add them.</td></tr>
+        <td>Installed as a repo-level GitHub App on <code>expandhealthai</code> ONLY (org: <code>emilianpopa</code>, dashboard at <a href="https://app.snyk.io/org/emilianpopa/">app.snyk.io/org/emilianpopa/</a>). The Snyk dashboard's "Targets" list shows exactly one repo. As of 2026-04-10 it's tracking <strong>0 critical / 145 high / 562 medium / 208 low</strong> findings — triage playbook scaffolded in <a href="https://github.com/emilianpopa/expandhealthai/blob/staging/docs/snyk-high-severity-findings.md">expandhealthai/docs/snyk-high-severity-findings.md</a> (PR #1494). Posts <code>security/snyk (emilianpopa)</code> status check on every <code>expandhealthai</code> PR via the GitHub Checks API. <strong>Not yet installed on linkedin-automation, whatsapp-analyzer, or dawa-ai</strong> — runbook ready at <code>~/Projects/emilian-pa/docs/runbooks/snyk-rollout.md</code> (~5 min total).</td></tr>
     <tr><td>AI code review</td><td><strong>CodeRabbit</strong> (GitHub App)</td>
         <td>Every PR</td>
         <td>Second AI reviewer alongside the Claude reviewer — installed as a repo-level GitHub App on <code>expandhealthai</code>, <code>linkedin-automation</code>, <code>whatsapp-analyzer</code>. Posts a <code>CodeRabbit</code> status check via the Checks API. Both AI reviewers have to pass.</td></tr>
@@ -863,7 +863,7 @@ allowed-tools: Read, Bash, Edit, Grep
     <tr><td>This MacBook</td><td><span class="badge green">Installed &amp; live</span></td>
         <td><code>~/shared-claude-rules</code> is the local clone, <code>~/.claude/skills</code> is a symlink into it</td></tr>
     <tr><td>Hetzner cloud dev box</td><td><span class="badge amber">TODO</span></td>
-        <td><code>git clone git@github.com:emilianpopa/shared-claude-rules.git ~/shared-claude-rules &amp;&amp; ln -s ~/shared-claude-rules/skills ~/.claude/skills</code></td></tr>
+        <td>Runbook ready at <code>~/Projects/emilian-pa/docs/runbooks/hetzner-skills-sync.md</code> — execute when next on the box (~30 seconds)</td></tr>
     <tr><td>Coder workspaces</td><td><span class="badge green">Wired in</span></td>
         <td>Done. The <code>cloud-dev-environment</code> Terraform template (<code>templates/devcontainer/main.tf</code>, commit <code>a7e9363</code>) now clones the skills repo and creates the symlink as part of the workspace startup script. Every new workspace gets all skills automatically — zero per-workspace config.</td></tr>
     <tr><td>Collaborators (Rui, Ido)</td><td><span class="badge amber">Future</span></td>
