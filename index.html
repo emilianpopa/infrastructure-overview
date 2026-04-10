@@ -579,7 +579,7 @@ function scrubPHI(event) {
 <h2 id="bots">11. Bots, emails &amp; why "PR Review" keeps failing right now</h2>
 
 <div class="panel warn">
-<h4>The actual reason your inbox is full of "PR Review" failure mails (verified 2026-04-10)</h4>
+<h4>The reason "PR Review" was failing for ~24 hours (resolved 2026-04-10 via PR #1488)</h4>
 <p>I pulled the last 15 PR Review runs on <code>expandhealthai</code> — the workflow has been
    failing on <em>every PR for the past day</em>. The failure isn't a configuration bug. It's
    the <code>Security Scan</code> job correctly catching <strong>two real CVEs in the lockfile</strong>:</p>
@@ -597,10 +597,7 @@ npm audit fix
 git add package.json package-lock.json
 git commit -m "Bump axios + lodash to patch GHSA-3p68-rc4w-qgx5 + GHSA-r5fr-rjxr-66jc"
 git push</pre>
-<p>Once that lands, every subsequent PR will go green again. The system is working — it's
-   refusing to merge anything until you patch the underlying issue. Dependabot would have
-   caught this on the next Monday cycle anyway, but the CVEs are critical enough that the
-   gating is doing exactly what you set it up to do.</p>
+<p>Resolution: <a href="https://github.com/emilianpopa/expandhealthai/pull/1488">emilianpopa/expandhealthai#1488</a> opened against staging on 2026-04-10 with the lockfile-only fix. Once that lands, every subsequent PR goes green. The system worked exactly as designed: it refused to merge anything until the CVEs were patched. The full repeatable flow is now captured as the <code>npm-audit-fix-and-pr</code> skill (see §12).</p>
 </div>
 
 <p>This is the complete list of automated agents running across the production repos. Every line item below either opens a PR, posts a comment,
@@ -664,123 +661,168 @@ git push</pre>
 <h2 id="skills">12. Skills system (cross-project) &amp; Babysitter</h2>
 
 <p>"Skills" are the unit of reusable, version-controlled know-how that Claude Code loads on
-   demand. A skill is a Markdown file describing <em>when to use a tool, how to use it, and
-   what to avoid</em>. The model picks up the skill by name and follows the instructions
-   verbatim — so a well-written skill is effectively a deterministic plugin you can hand
-   to any project.</p>
+   demand. A skill is a Markdown file with YAML frontmatter describing <em>when to use a tool,
+   how to use it, and what to avoid</em>. Claude reads the description, decides if the skill
+   matches the current task, and follows the instructions verbatim. A well-written skill is a
+   deterministic plugin that any project can call.</p>
 
-<h3>Current state (what's actually in the repos)</h3>
+<div class="panel" style="border-color: #2c4a36; background: #112116;">
+<h4>Current state — built and live (verified 2026-04-10)</h4>
+<p>The cross-project skills system is operational. Architecture:</p>
+<div class="flow">
+~/shared-claude-rules/skills/   ◄── source of truth (private GitHub repo)
+        │
+        ▼  symlink
+~/.claude/skills/                ◄── Claude Code reads from here in every project
+</div>
+<ul>
+  <li><strong>Repo:</strong> <code>github.com/emilianpopa/shared-claude-rules</code> (private)</li>
+  <li><strong>8 skills installed</strong>, loading into every Claude Code conversation in every project automatically</li>
+  <li><strong>Per-project <code>.claude/skills/</code> folders are now empty</strong> — single source of truth</li>
+  <li><strong>To add a new skill:</strong> drop a <code>.md</code> file in <code>~/shared-claude-rules/skills/</code>, commit, push. Done.</li>
+  <li><strong>To sync to a new machine</strong> (Hetzner dev box, new laptop): <code>git clone git@github.com:emilianpopa/shared-claude-rules.git ~/shared-claude-rules &amp;&amp; ln -s ~/shared-claude-rules/skills ~/.claude/skills</code></li>
+</ul>
+</div>
+
+<h3>The 8 skills currently installed</h3>
 
 <table>
-  <thead><tr><th>Location</th><th>Skills present</th></tr></thead>
+  <thead><tr><th>Skill</th><th>What it captures</th><th>Origin</th></tr></thead>
   <tbody>
-    <tr><td><code>~/Projects/expandhealthai/.claude/skills/</code></td>
-        <td>5 skills:
-          <ul>
-            <li><code>expandhealth-cockpit-kpi.md</code></li>
-            <li><code>expandhealth-report-bilingual.md</code></li>
-            <li><code>expandhealth-report-iterate.md</code></li>
-            <li><code>expandhealth-section-add.md</code></li>
-            <li><code>n8n-mcp-api.md</code></li>
-          </ul>
-        </td></tr>
-    <tr><td><code>~/Projects/mindvalley-ai-mastery-students/.claude/skills/</code></td>
-        <td>1 skill: <code>n8n-mcp-api.md</code></td></tr>
-    <tr><td><code>~/.claude/skills/</code> (global)</td>
-        <td><span class="badge amber">not yet created</span> — this is the gap. Creating it makes any skill available in <em>every</em> project automatically.</td></tr>
+    <tr><td><code>npm-audit-fix-and-pr</code></td>
+        <td>Branch from staging, run <code>npm audit fix</code>, run smoke tests locally, commit lockfile-only, push, open PR to staging — the full flow with all the gotchas (no <code>--force</code>, no <code>git add -A</code>, supersede stale Dependabot PRs)</td>
+        <td>Extracted from the real fix on PR #1488 patching axios + lodash CVEs</td></tr>
+    <tr><td><code>staging-first-promotion-flow</code></td>
+        <td>The branching, PR safety guards, branch protection rules, and "Promote to Production" workflow_dispatch — every rule of the <code>feature/* → staging → main</code> model</td>
+        <td>Extracted from the workflows + branch protection rules across expandhealthai, linkedin-automation, dawa-ai, whatsapp-analyzer</td></tr>
+    <tr><td><code>sentry-hipaa-init</code></td>
+        <td>Initialize <code>@sentry/node</code> with HIPAA-grade PHI scrubbing (strip auth headers, cookies, body, query string), wire into Express, expose status in health endpoint, graceful-shutdown flush</td>
+        <td>Extracted from <code>expandhealthai/demo/expand-health/v2/server.js</code> lines 9–39</td></tr>
+    <tr><td><code>n8n-mcp-api</code></td>
+        <td>Programmatic n8n workflow editing via MCP — surgical adds/edits, IF-branch routing using semantic <code>branch</code> parameter, validation profiles, subagent delegation for 40+ node workflows</td>
+        <td>Was already in expandhealthai (loose .md) — promoted with proper YAML frontmatter</td></tr>
+    <tr><td><code>expandhealth-cockpit-kpi</code></td>
+        <td>Add or update a single KPI in the Health Cockpit (Section 1 of the bilingual report)</td>
+        <td>Was already in expandhealthai</td></tr>
+    <tr><td><code>expandhealth-report-bilingual</code></td>
+        <td>Verify and fix bilingual (RO/EN) report output — checking that every section, label, and AI-generated string is fully translated</td>
+        <td>Was already in expandhealthai</td></tr>
+    <tr><td><code>expandhealth-report-iterate</code></td>
+        <td>Core dev loop for iterating on any report section or prompt — generate, inspect, patch, re-generate, diff</td>
+        <td>Was already in expandhealthai</td></tr>
+    <tr><td><code>expandhealth-section-add</code></td>
+        <td>Structured checklist for adding a new section to the 11-section report structure</td>
+        <td>Was already in expandhealthai</td></tr>
   </tbody>
 </table>
 
-<p class="meta">Note: <code>n8n-mcp-api.md</code> already exists in two projects, which is exactly the duplication
-  the cross-project setup eliminates.</p>
+<h3>Skill file format (Anthropic spec)</h3>
 
-<h3>Skill file shape</h3>
-<p>Each skill is a Markdown doc with a stable structure so Claude can parse it consistently:</p>
-<pre># Skill: &lt;Name&gt;
+<p>Every skill is a Markdown file with a YAML frontmatter header. The <code>description</code> field
+   is what Claude reads to decide whether the skill matches the current task — be specific and
+   include trigger phrases.</p>
 
-## Overview
-One paragraph: what this skill does and when it earns its keep.
+<pre>---
+name: my-skill-name
+description: One-paragraph trigger description. Use this skill when X. Don't use it when Y. Include keywords the user is likely to say so Claude reliably picks it up.
+allowed-tools: Read, Bash, Edit, Grep
+---
 
-## When to use this skill
-- Bullet list of trigger conditions
+# Skill Title
 
-## When NOT to use it
+## When to use
+- Concrete trigger conditions
+
+## When NOT to use
 - The opposite list — equally important
 
-## Tools / commands
-- Concrete commands, MCP tool names, or code snippets
+## The flow / instructions
+[Step-by-step content with concrete bash blocks, not abstract advice]
 
-## Examples
-- Worked examples of the input → output
+## Things to avoid
+- Anti-patterns the user has hit before, with the reason
+
+## Reference
+- File paths, commit SHAs, prior incidents the skill is extracted from
 </pre>
 
-<h3>Three patterns for cross-project sharing</h3>
+<h3>How a new skill gets added</h3>
+
+<ol>
+  <li><strong>Identify a workflow you've executed at least twice</strong> and want to standardize. (One-off knowledge isn't worth a skill.)</li>
+  <li>Write a new <code>&lt;skill-name&gt;.md</code> in <code>~/shared-claude-rules/skills/</code> using the format above.</li>
+  <li>Lead the <code>description</code> with a clear "Use when..." trigger. Include the exact phrases you'd type when asking for it.</li>
+  <li>Document concrete commands in bash blocks — never abstract advice like "configure Sentry properly".</li>
+  <li>Add a <strong>Reference</strong> section pointing at the file/commit/PR the skill was extracted from. This makes future audits trivial.</li>
+  <li><code>cd ~/shared-claude-rules &amp;&amp; git add skills/ &amp;&amp; git commit -m "add &lt;skill-name&gt;" &amp;&amp; git push</code></li>
+  <li>Done — every Claude conversation in every project on this machine now has access to it. Other machines pick it up after <code>git pull</code>.</li>
+</ol>
+
+<h3>The skill candidate backlog</h3>
+
+<p>Patterns I've seen in the repos that should become skills next, in priority order:</p>
+
+<ul>
+  <li><strong>railway-deploy-flow</strong> — the never-use-<code>railway up</code> rule, push-to-main = production, how to read deploy logs from the Railway dashboard or CLI</li>
+  <li><strong>dependabot-monday-triage</strong> — the weekly batch process for grouped Dependabot PRs, how to spot the wrongly-targeted ones, when to bulk-merge vs review individually</li>
+  <li><strong>python-ci-gate</strong> — ruff + pytest + bandit + pip-audit + Dependabot pattern from <code>linkedin-automation</code> — the lightweight Python equivalent of the Node CI stack</li>
+  <li><strong>claude-code-review-action-setup</strong> — how to wire up the auto-PR-reviewer + <code>@claude</code> helper on a brand-new repo (the <code>code-review.yml</code> + <code>claude-pr.yml</code> pair)</li>
+  <li><strong>backup-restore-test-pattern</strong> — the daily backup + retention + monthly restore-test trinity, transferable to any Postgres-backed Railway app</li>
+  <li><strong>gmail-multi-account-search</strong> — the four-account <code>gmail_all.py</code> pattern from <code>~/calendar/</code></li>
+  <li><strong>cloud-dev-workspace-create</strong> — <code>coder create</code> flow + the per-project <code>.devcontainer/devcontainer.json</code> template</li>
+  <li><strong>memory-write-checklist</strong> — when to save user/feedback/project/reference memories vs not, with the existing types from this project's auto-memory system</li>
+</ul>
+
+<h3>Babysitter — the Ido layer (next step, not yet installed)</h3>
 
 <div class="panel">
-<h4>Pattern A — Global folder (<code>~/.claude/skills/</code>)</h4>
-<p>Claude Code automatically loads skills from the user-level <code>~/.claude/skills/</code> directory
-   in every conversation, regardless of which project is open. <strong>Recommended starting point</strong>:</p>
-<pre>mkdir -p ~/.claude/skills
-mv ~/Projects/expandhealthai/.claude/skills/n8n-mcp-api.md ~/.claude/skills/
-ln -s ~/.claude/skills/n8n-mcp-api.md ~/Projects/expandhealthai/.claude/skills/n8n-mcp-api.md</pre>
-<p>Pros: zero infrastructure. Cons: not version-controlled unless you also git-init the folder.</p>
-</div>
+<p>Ido shared <a href="https://github.com/a5c-ai/babysitter">github.com/a5c-ai/babysitter</a>
+   — a Claude Code plugin from a5c.ai (~536 stars, MIT). It's a complementary layer that
+   sits on top of the skills system and adds two things our local setup doesn't have:</p>
 
-<div class="panel">
-<h4>Pattern B — Git repo + symlink (the <code>shared-claude-rules</code> pattern)</h4>
-<p>You already do this for cross-project rules — there's a <code>~/shared-claude-rules/</code> dir
-   referenced in your global <code>CLAUDE.md</code>. Same idea for skills: create
-   <code>~/shared-claude-rules/skills/</code>, push it as its own git repo, and symlink it into
-   <code>~/.claude/skills/</code>:</p>
-<pre>cd ~/shared-claude-rules
-mkdir skills
-git add skills && git commit -m "init shared skills"
-git push
-ln -s ~/shared-claude-rules/skills ~/.claude/skills</pre>
-<p>Pros: version-controlled, shareable across machines (and with collaborators), survives
-   reinstall. Cons: one extra step when adding a new skill (commit + push).</p>
-</div>
-
-<div class="panel">
-<h4>Pattern C — Babysitter plugin marketplace (<code>a5c-ai/babysitter</code>)</h4>
-<p>This is what Ido shared. <a href="https://github.com/a5c-ai/babysitter">github.com/a5c-ai/babysitter</a>
-   is a Claude Code plugin from a5c.ai (~536 stars at time of writing, MIT). It's described as:</p>
 <blockquote style="border-left: 3px solid #2c4a36; padding: 8px 14px; color: #b6f0c8; background: #112116; border-radius: 4px;">
   "Babysitter enforces obedience to agentic workforces, enabling them to manage extremely complex
   tasks and workflows through deterministic, hallucination-free self-orchestration. Define your
   workflow in code — Babysitter enforces every step, ensures quality gates pass before progression,
   requires human approval at breakpoints, and records every decision in an immutable journal."
 </blockquote>
-<p>It installs as a native Claude Code plugin via the marketplace and surfaces a <code>/skills</code>
-   command. After install, type <code>/skills</code> and a skill called <code>babysit</code> appears.
-   Install:</p>
-<pre>claude plugin marketplace add a5c-ai/babysitter
-claude plugin install --scope user babysitter@a5c.ai
-# restart Claude Code, then: /skills</pre>
-<p>Why it matters here:</p>
-<ul>
-  <li>It's a <strong>shared distribution channel</strong> for skills — other Claude Code users can
-      <code>plugin marketplace add</code> the same source and instantly get the same skills.</li>
-  <li>The "babysitter" angle adds <strong>workflow enforcement</strong> on top: every skill is a step
-      in a pipeline, the journal records every decision, breakpoints require human approval. This
-      is the Claude-side equivalent of the staging→main promotion rules in §4.</li>
-  <li>It supports the same plugin pattern across <strong>Claude Code, Codex CLI, Cursor, and Gemini
-      CLI</strong> — so a skill written once works in any of those harnesses.</li>
-  <li>It's actively maintained and the SDK ships on npm as <code>@a5c-ai/babysitter-sdk</code>.</li>
-</ul>
+
+<ol>
+  <li><strong>Marketplace distribution.</strong> Babysitter installs via
+      <code>claude plugin marketplace add a5c-ai/babysitter</code>. Once skills are
+      packaged into a marketplace plugin, anyone (Rui, Ido, future collaborators) can pull
+      them with a single command without needing access to your private GitHub repo.</li>
+  <li><strong>Workflow enforcement.</strong> Skills become steps in a pipeline with quality
+      gates, breakpoints, and an immutable journal of every decision. The Claude-side
+      equivalent of the staging→main promotion rules in §4.</li>
+</ol>
+
+<p>Babysitter also works across <strong>Claude Code, Codex CLI, Cursor, and Gemini CLI</strong> —
+   so a skill written once travels to any of those harnesses. The SDK is on npm as
+   <code>@a5c-ai/babysitter-sdk</code>.</p>
+
+<p><strong>Status:</strong> not yet installed locally. The plan is to use the current
+   <code>shared-claude-rules</code> repo as the source of truth, and once 4–5 more skills
+   exist (the backlog above), package them into a Babysitter-compatible marketplace plugin.
+   That gives the same shared skills + the workflow-enforcement layer for cases where the
+   skill is multi-step and dangerous (e.g. the production promotion sequence).</p>
 </div>
 
-<h3>Recommended path forward</h3>
-<ol>
-  <li><strong>Today</strong>: create <code>~/.claude/skills/</code> (Pattern A) and move the
-      duplicated <code>n8n-mcp-api.md</code> there. Symlink it back into the two projects so nothing
-      breaks if you open them solo.</li>
-  <li><strong>This week</strong>: convert it into a git-tracked folder under <code>~/shared-claude-rules/skills/</code>
-      (Pattern B). Now the skills travel with you to the Hetzner dev box and any new machine.</li>
-  <li><strong>When you want to share with Rui / Ido / any other collaborator</strong>: install
-      Babysitter (Pattern C). It gives you a marketplace-style distribution + the workflow
-      enforcement layer on top. Anyone they hand the marketplace name to gets the same skills.</li>
-</ol>
+<h3>How this stays in sync across machines</h3>
+
+<table>
+  <thead><tr><th>Where</th><th>Status</th><th>How to install</th></tr></thead>
+  <tbody>
+    <tr><td>This MacBook</td><td><span class="badge green">Installed &amp; live</span></td>
+        <td><code>~/shared-claude-rules</code> is the local clone, <code>~/.claude/skills</code> is a symlink into it</td></tr>
+    <tr><td>Hetzner cloud dev box</td><td><span class="badge amber">TODO</span></td>
+        <td><code>git clone git@github.com:emilianpopa/shared-claude-rules.git ~/shared-claude-rules &amp;&amp; ln -s ~/shared-claude-rules/skills ~/.claude/skills</code></td></tr>
+    <tr><td>Coder workspaces</td><td><span class="badge amber">TODO</span></td>
+        <td>Add the same clone+symlink to the workspace bootstrap script in the <code>cloud-dev-environment</code> Terraform template — every new workspace then has the skills automatically</td></tr>
+    <tr><td>Collaborators (Rui, Ido)</td><td><span class="badge amber">Future</span></td>
+        <td>Either add as repo collaborators (read-only) or repackage as a Babysitter marketplace plugin for true distribution</td></tr>
+  </tbody>
+</table>
 
 <h2 id="pa">13. Personal assistant hub (emilian-pa)</h2>
 
