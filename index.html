@@ -359,6 +359,12 @@ feature/xxx ─► PR into staging ─► auto-checks ─► QA on staging ─�
     <tr><td>Native CVE alerts</td><td>GitHub Dependabot Security Alerts</td>
         <td>Always on</td>
         <td>Surfaces in repo Security tab + email when a CVE matches your lockfile</td></tr>
+    <tr><td>Commercial SCA</td><td><strong>Snyk</strong> (GitHub App, not workflow file)</td>
+        <td>Every PR</td>
+        <td>Installed as a repo-level GitHub App on <code>expandhealthai</code> (org: <code>emilianpopa</code>). Posts a <code>security/snyk</code> status check on every PR via the GitHub Checks API. Confirmed live on PR #1488.</td></tr>
+    <tr><td>AI code review</td><td><strong>CodeRabbit</strong> (GitHub App)</td>
+        <td>Every PR</td>
+        <td>Second AI reviewer alongside the Claude reviewer — installed as a repo-level GitHub App on <code>expandhealthai</code>. Posts a <code>CodeRabbit</code> status check via the Checks API. Both reviewers have to pass.</td></tr>
     <tr><td>Static analysis (Node)</td><td>ESLint w/ security ruleset</td>
         <td>Every PR + push + weekly</td>
         <td>Scans <code>server.js</code>, <code>api/**</code>, <code>services/**</code>, <code>middleware/**</code>, <code>database/**</code></td></tr>
@@ -380,10 +386,13 @@ feature/xxx ─► PR into staging ─► auto-checks ─► QA on staging ─�
   </tbody>
 </table>
 
-<p class="meta">Note on Snyk: the user does <em>not</em> currently run Snyk. The functional equivalent
-  is the matrix above — npm audit + pip-audit + GitHub Dependency Review for SCA, ESLint-security
-  + bandit for SAST, OWASP ZAP for DAST, and TruffleHog for secrets. Snyk would primarily
-  consolidate the SCA piece into a single dashboard with prioritized fix PRs.</p>
+<p class="meta"><strong>Snyk + CodeRabbit are GitHub Apps, not workflow files</strong> — they're
+  installed at the repo level and post their own status checks via the GitHub Checks API,
+  which is why a `find` against <code>.github/workflows/</code> doesn't surface them. They
+  showed up only when I queried <code>gh pr checks</code> on PR #1488. Both are confirmed
+  passing on every <code>expandhealthai</code> PR. Open question worth deciding: roll Snyk
+  + CodeRabbit out to <code>linkedin-automation</code>, <code>dawa-ai</code>, and
+  <code>whatsapp-analyzer</code> too, or keep them on the flagship repo only.</p>
 
 <h2 id="backup">7. Backups &amp; disaster recovery</h2>
 
@@ -579,7 +588,7 @@ function scrubPHI(event) {
 <h2 id="bots">11. Bots, emails &amp; why "PR Review" keeps failing right now</h2>
 
 <div class="panel warn">
-<h4>The reason "PR Review" was failing for ~24 hours (resolved 2026-04-10 via PR #1488)</h4>
+<h4>The reason "PR Review" was failing for ~24 hours (RESOLVED — PR #1488 all checks green 2026-04-10)</h4>
 <p>I pulled the last 15 PR Review runs on <code>expandhealthai</code> — the workflow has been
    failing on <em>every PR for the past day</em>. The failure isn't a configuration bug. It's
    the <code>Security Scan</code> job correctly catching <strong>two real CVEs in the lockfile</strong>:</p>
@@ -597,14 +606,14 @@ npm audit fix
 git add package.json package-lock.json
 git commit -m "Bump axios + lodash to patch GHSA-3p68-rc4w-qgx5 + GHSA-r5fr-rjxr-66jc"
 git push</pre>
-<p>Resolution: <a href="https://github.com/emilianpopa/expandhealthai/pull/1488">emilianpopa/expandhealthai#1488</a> opened against staging on 2026-04-10 with the lockfile-only fix. Once that lands, every subsequent PR goes green. The system worked exactly as designed: it refused to merge anything until the CVEs were patched. The full repeatable flow is now captured as the <code>npm-audit-fix-and-pr</code> skill (see §12).</p>
+<p>Resolution: <a href="https://github.com/emilianpopa/expandhealthai/pull/1488">emilianpopa/expandhealthai#1488</a> opened against staging on 2026-04-10 with the lockfile-only fix. <strong>All 8 checks pass green:</strong> File Deletion Guard, Lint and Test, PR Description Lint, PR Summary, Pre-merge Syntax and Smoke, Security Scan, security/snyk, and CodeRabbit. Ready to merge. The system worked exactly as designed: it refused to merge anything until the CVEs were patched. The full repeatable flow is now captured as the <code>npm-audit-fix-and-pr</code> skill (see §12).</p>
 </div>
 
 <p>This is the complete list of automated agents running across the production repos. Every line item below either opens a PR, posts a comment,
    files an issue, or sends a failure email. Knowing which is which makes it easy to mute the
    noisy ones and act on the important ones.</p>
 
-<h3>The eight bot voices in your inbox</h3>
+<h3>The bot voices in your inbox (ten of them)</h3>
 
 <table>
   <thead><tr><th>#</th><th>Bot / source</th><th>What it does</th><th>Notifies you when</th></tr></thead>
@@ -639,8 +648,16 @@ git push</pre>
     <tr><td>10</td><td><strong>Backup &amp; restore failure alerts</strong><br><code>daily-backup.yml</code> + <code>backup-retention-cleanup.yml</code> + <code>monthly-restore-test.yml</code></td>
         <td>Each of the three backup workflows has a dedicated <code>notify-failure</code> job that runs on <code>if: failure()</code>, prints an <code>::error::</code> annotation, and writes a failure summary. GitHub watchers receive these as email.</td>
         <td><strong>Only on failure.</strong> Daily 02:00 (backup), weekly Sun 04:00 (cleanup), monthly 1st 03:00 (restore test).</td></tr>
+    <tr><td>11</td><td><strong>Snyk</strong> (GitHub App, not in <code>.github/workflows/</code>)</td>
+        <td>Commercial SCA — installed at the repo level on <code>expandhealthai</code> under the <code>emilianpopa</code> Snyk org. Scans every PR for vulnerable dependencies and posts a <code>security/snyk</code> status check via the Checks API. Findings are visible at <code>app.snyk.io/org/emilianpopa</code>.</td>
+        <td>Every PR. Confirmed live on PR #1488 (3 tests skipped, all passing).</td></tr>
+    <tr><td>12</td><td><strong>CodeRabbit</strong> (GitHub App, not in <code>.github/workflows/</code>)</td>
+        <td>AI code reviewer — installed as a repo-level GitHub App on <code>expandhealthai</code>. Posts inline review comments and a <code>CodeRabbit</code> status check. Sits alongside the Claude Code reviewer; both have to pass.</td>
+        <td>Every PR.</td></tr>
   </tbody>
 </table>
+
+<p class="meta"><strong>Why I missed Snyk + CodeRabbit on the first pass:</strong> they're GitHub Apps, not GitHub Actions workflows. They live at the repo's app-installation level (Settings → GitHub Apps), and post checks via the GitHub Checks API rather than the workflows file. A <code>find</code> against <code>.github/workflows/</code> will never see them. The only way to enumerate them is <code>gh pr checks &lt;pr-number&gt;</code> on a real PR.</p>
 
 <h3>How to triage the inbox</h3>
 <ul>
@@ -652,10 +669,10 @@ git push</pre>
 
 <h3>What this stack does <em>not</em> have (yet)</h3>
 <ul>
-  <li><strong>CodeRabbit / Greptile / Cursor Bugbot</strong> — third-party AI reviewers that some teams stack on top of the Claude reviewer. Not currently installed.</li>
-  <li><strong>CodeQL</strong> — GitHub's first-party SAST. Free for private repos. Could be added as a 12th workflow.</li>
+  <li><strong>Greptile / Cursor Bugbot</strong> — additional AI reviewers some teams stack on top of Claude + CodeRabbit. Two AI reviewers (Claude + CodeRabbit) are already enough; adding a third is diminishing returns.</li>
+  <li><strong>CodeQL</strong> — GitHub's first-party SAST. Free for private repos. Could be added as a workflow alongside ESLint-security + bandit.</li>
   <li><strong>CodeCov / Codacy</strong> — coverage trend tracking. Coverage is computed in <code>ci.yml</code> but not pushed anywhere central.</li>
-  <li><strong>Sentry / Better Stack alerts wired into GitHub</strong> — Sentry is on PAYG but not surfacing into PR checks.</li>
+  <li><strong>Sentry release tracking wired into GitHub</strong> — Sentry is live on the app (with HIPAA scrubbing — see §8) but not surfacing into PR checks. Adding a Sentry release notification step on Railway deploys would close that loop.</li>
 </ul>
 
 <h2 id="skills">12. Skills system (cross-project) &amp; Babysitter</h2>
@@ -677,14 +694,15 @@ git push</pre>
 </div>
 <ul>
   <li><strong>Repo:</strong> <code>github.com/emilianpopa/shared-claude-rules</code> (private)</li>
-  <li><strong>8 skills installed</strong>, loading into every Claude Code conversation in every project automatically</li>
+  <li><strong>11 skills installed</strong>, loading into every Claude Code conversation in every project automatically</li>
   <li><strong>Per-project <code>.claude/skills/</code> folders are now empty</strong> — single source of truth</li>
   <li><strong>To add a new skill:</strong> drop a <code>.md</code> file in <code>~/shared-claude-rules/skills/</code>, commit, push. Done.</li>
   <li><strong>To sync to a new machine</strong> (Hetzner dev box, new laptop): <code>git clone git@github.com:emilianpopa/shared-claude-rules.git ~/shared-claude-rules &amp;&amp; ln -s ~/shared-claude-rules/skills ~/.claude/skills</code></li>
+  <li><strong>New Coder workspaces</strong> get the skills automatically — the <code>cloud-dev-environment</code> Terraform template now clones <code>shared-claude-rules</code> and creates the symlink as part of the workspace startup script (commit <code>a7e9363</code>). Zero per-workspace setup.</li>
 </ul>
 </div>
 
-<h3>The 8 skills currently installed</h3>
+<h3>The 11 skills currently installed</h3>
 
 <table>
   <thead><tr><th>Skill</th><th>What it captures</th><th>Origin</th></tr></thead>
@@ -692,6 +710,15 @@ git push</pre>
     <tr><td><code>npm-audit-fix-and-pr</code></td>
         <td>Branch from staging, run <code>npm audit fix</code>, run smoke tests locally, commit lockfile-only, push, open PR to staging — the full flow with all the gotchas (no <code>--force</code>, no <code>git add -A</code>, supersede stale Dependabot PRs)</td>
         <td>Extracted from the real fix on PR #1488 patching axios + lodash CVEs</td></tr>
+    <tr><td><code>railway-deploy-flow</code></td>
+        <td>Every Railway convention — push-to-main = production deploy, never <code>railway up</code>, three real <code>railway.toml</code> patterns (Dockerfile / nixpacks / nixpacks + releaseCommand), healthcheck endpoint convention, common deploy failures and fixes</td>
+        <td>Extracted from <code>dawa-ai</code>, <code>whatsapp-analyzer</code>, <code>linkedin-automation</code></td></tr>
+    <tr><td><code>dependabot-monday-triage</code></td>
+        <td>Weekly Monday process for the grouped Dependabot PR wave — bucket each PR (grouped minor/patch / single major / wrong target / failing CI), bulk-merge safe ones, retry failing ones, the <code>@dependabot</code> comment commands</td>
+        <td>Extracted from the live <code>.github/dependabot.yml</code> in <code>expandhealthai</code> + <code>linkedin-automation</code></td></tr>
+    <tr><td><code>python-ci-gate</code></td>
+        <td>The lightweight Python CI stack — <code>ruff + pytest + bandit + pip-audit + Dependabot</code>. Three workflow files (<code>ci.yml</code> / <code>security.yml</code> / <code>dependabot.yml</code>) plus <code>pyproject.toml</code> + <code>requirements-dev.txt</code> scaffolding</td>
+        <td>Extracted from <code>linkedin-automation</code> — the Python equivalent of the heavier Node stack</td></tr>
     <tr><td><code>staging-first-promotion-flow</code></td>
         <td>The branching, PR safety guards, branch protection rules, and "Promote to Production" workflow_dispatch — every rule of the <code>feature/* → staging → main</code> model</td>
         <td>Extracted from the workflows + branch protection rules across expandhealthai, linkedin-automation, dawa-ai, whatsapp-analyzer</td></tr>
@@ -758,19 +785,15 @@ allowed-tools: Read, Bash, Edit, Grep
   <li>Done — every Claude conversation in every project on this machine now has access to it. Other machines pick it up after <code>git pull</code>.</li>
 </ol>
 
-<h3>The skill candidate backlog</h3>
-
-<p>Patterns I've seen in the repos that should become skills next, in priority order:</p>
+<h3>The skill candidate backlog (next ones to write)</h3>
 
 <ul>
-  <li><strong>railway-deploy-flow</strong> — the never-use-<code>railway up</code> rule, push-to-main = production, how to read deploy logs from the Railway dashboard or CLI</li>
-  <li><strong>dependabot-monday-triage</strong> — the weekly batch process for grouped Dependabot PRs, how to spot the wrongly-targeted ones, when to bulk-merge vs review individually</li>
-  <li><strong>python-ci-gate</strong> — ruff + pytest + bandit + pip-audit + Dependabot pattern from <code>linkedin-automation</code> — the lightweight Python equivalent of the Node CI stack</li>
   <li><strong>claude-code-review-action-setup</strong> — how to wire up the auto-PR-reviewer + <code>@claude</code> helper on a brand-new repo (the <code>code-review.yml</code> + <code>claude-pr.yml</code> pair)</li>
   <li><strong>backup-restore-test-pattern</strong> — the daily backup + retention + monthly restore-test trinity, transferable to any Postgres-backed Railway app</li>
   <li><strong>gmail-multi-account-search</strong> — the four-account <code>gmail_all.py</code> pattern from <code>~/calendar/</code></li>
   <li><strong>cloud-dev-workspace-create</strong> — <code>coder create</code> flow + the per-project <code>.devcontainer/devcontainer.json</code> template</li>
   <li><strong>memory-write-checklist</strong> — when to save user/feedback/project/reference memories vs not, with the existing types from this project's auto-memory system</li>
+  <li><strong>snyk-coderabbit-rollout</strong> — install Snyk + CodeRabbit GitHub Apps on a new repo (the pattern from expandhealthai), pin them as required status checks</li>
 </ul>
 
 <h3>Babysitter — the Ido layer (next step, not yet installed)</h3>
@@ -817,8 +840,8 @@ allowed-tools: Read, Bash, Edit, Grep
         <td><code>~/shared-claude-rules</code> is the local clone, <code>~/.claude/skills</code> is a symlink into it</td></tr>
     <tr><td>Hetzner cloud dev box</td><td><span class="badge amber">TODO</span></td>
         <td><code>git clone git@github.com:emilianpopa/shared-claude-rules.git ~/shared-claude-rules &amp;&amp; ln -s ~/shared-claude-rules/skills ~/.claude/skills</code></td></tr>
-    <tr><td>Coder workspaces</td><td><span class="badge amber">TODO</span></td>
-        <td>Add the same clone+symlink to the workspace bootstrap script in the <code>cloud-dev-environment</code> Terraform template — every new workspace then has the skills automatically</td></tr>
+    <tr><td>Coder workspaces</td><td><span class="badge green">Wired in</span></td>
+        <td>Done. The <code>cloud-dev-environment</code> Terraform template (<code>templates/devcontainer/main.tf</code>, commit <code>a7e9363</code>) now clones the skills repo and creates the symlink as part of the workspace startup script. Every new workspace gets all skills automatically — zero per-workspace config.</td></tr>
     <tr><td>Collaborators (Rui, Ido)</td><td><span class="badge amber">Future</span></td>
         <td>Either add as repo collaborators (read-only) or repackage as a Babysitter marketplace plugin for true distribution</td></tr>
   </tbody>
