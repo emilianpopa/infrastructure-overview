@@ -980,27 +980,28 @@ allowed-tools: Read, Bash, Edit, Grep
    harness. The skills repo (see &sect;12) was shared with Deepak and Matt so they can reuse it
    directly rather than relearn it.</p>
 
+
 <ol>
-  <li><strong>An issue for everything you build.</strong> Tell the coding agent to open a GitHub
+  <li>An issue for everything you build: tell the coding agent to open a GitHub
       issue, document it, then solve it with a PR that merges. Without this the work turns into
       spaghetti and you cannot go back to fix a bug later. Every unit of work is issue, then PR,
       then merge.</li>
-  <li><strong>A parallel worker fleet.</strong> One VS Code instance with 10 to 20 windows open,
+  <li>A parallel worker fleet: one VS Code instance with 10 to 20 windows open,
       each window a worker that behaves like a developer. Workers run parallel tasks on the same
       project at the same time.</li>
-  <li><strong>Merge safety on the core.</strong> Because several workers touch shared core code,
+  <li>Merge safety on the core: because several workers touch shared core code,
       two of them merging into the same files at once can break the core, the same way two
       developers merging into one file would. The setup has to be told to check, on every merge,
       that the piece it is landing does not break the other pieces of work.</li>
-  <li><strong>Multiple agentic code reviewers.</strong> AI writes buggy code the way developers
+  <li>Multiple agentic code reviewers: AI writes buggy code the way developers
       do, and in real dev you always have review. Several agentic reviewers (CodeRabbit type) run
       over the workers' output and produce reports several times a day. The findings get pasted
       back into Claude Code to fix. Without the reviewers the code would be broken.</li>
-  <li><strong>Reusable skills in a shared repo.</strong> Every time you build something reusable,
+  <li>Reusable skills in a shared repo: every time you build something reusable,
       save it as a skill in a separate GitHub repo that is open to everything else you do. Next
       time the agent reuses the skill without you relearning it. The repo is roughly six months of
       accumulated learnings, shared so others "use someone else's brain".</li>
-  <li><strong>Separate machines for autonomous versus sensitive work.</strong> To truly automate,
+  <li>Separate machines for autonomous versus sensitive work: to truly automate,
       you give the agent full rights: Playwright takes over the browser and can drive the Mac
       programmatically. Because of that, the fully autonomous machine stays separate from the
       machine that holds sensitive day-to-day work and passwords. Two or three laptops, or at
@@ -1060,7 +1061,7 @@ allowed-tools: Read, Bash, Edit, Grep
       public-routes list, or the global auth guard 401s the cron silently.</li>
 </ol>
 
-<h2 id="coding-with-claude">16. Coding with Claude &mdash; idea-to-app method &amp; four-skill toolkit</h2>
+<h2 id="coding-with-claude">16. Coding with Claude: idea-to-app method &amp; four-skill toolkit</h2>
 
 <p>From the Mindvalley AI Mastery 2026 "Introduction to Claude Code" class, July 2026. Where &sect;12
    captures infrastructure skills (deploy, backup, security flows), this is the product-building
@@ -1083,22 +1084,22 @@ mock it up ─► interview into a blueprint (/prd) ─► give it a look (/desi
 </div>
 
 <ol>
-  <li><strong>Mock it up.</strong> Start from a rough idea or a rough visual, not a finished spec.</li>
-  <li><strong>Get interviewed into a blueprint.</strong> <code>/prd</code> runs an active discovery
+  <li>Mock it up: start from a rough idea or a rough visual, not a finished spec.</li>
+  <li>Get interviewed into a blueprint: <code>/prd</code> runs an active discovery
       conversation that challenges vague answers and produces a structured PRD an agent can build
       from.</li>
-  <li><strong>Give it a look.</strong> <code>/design</code> pulls in a design system and maps it onto
+  <li>Give it a look: <code>/design</code> pulls in a design system and maps it onto
       the project's token architecture.</li>
-  <li><strong>Build it.</strong> <code>/build</code> takes a fully-resolved feature PRD and writes the
+  <li>Build it: <code>/build</code> takes a fully-resolved feature PRD and writes the
       code, tests first, following the repo's existing patterns.</li>
-  <li><strong>React and repeat.</strong> Look at what came out, feed your reactions back, and run the
+  <li>React and repeat: look at what came out, feed your reactions back, and run the
       loop again. The value is in the iteration, not one perfect pass.</li>
 </ol>
 
 <h3>The four skills</h3>
 
 <div class="panel">
-<h4>/prd &mdash; Blueprint Interviewer</h4>
+<h4>/prd Blueprint Interviewer</h4>
 <p>An Active Discovery PRD tool that behaves like a demanding but supportive product strategist. It
    turns vague ideas into executable plans through conversation rather than filling out a template.
    It never accepts the first answer, challenges vague words like "intuitive" and "seamless",
@@ -1110,7 +1111,7 @@ mock it up ─► interview into a blueprint (/prd) ─► give it a look (/desi
 </div>
 
 <div class="panel">
-<h4>/design &mdash; Design System Engineer</h4>
+<h4>/design Design System Engineer</h4>
 <p>Integrates an external design system into the project from one of three sources: a GitHub repo, a
    live website (extracted with Playwright), or a markdown spec. It reads the source's design
    language, then maps those decisions onto the project's existing <code>globals.css</code> token
@@ -1122,7 +1123,7 @@ mock it up ─► interview into a blueprint (/prd) ─► give it a look (/desi
 </div>
 
 <div class="panel">
-<h4>/build &mdash; Builder</h4>
+<h4>/build Builder</h4>
 <p>Builds a feature from a fully-resolved feature PRD. It refuses to start on a product or epic PRD,
    or on one with unresolved sections. It reads the relevant <code>CLAUDE.md</code> files and
    neighbouring code to learn the established patterns, generates a technical plan, and waits for
@@ -1134,21 +1135,21 @@ mock it up ─► interview into a blueprint (/prd) ─► give it a look (/desi
 </div>
 
 <div class="panel">
-<h4>/product-design &mdash; Five-lens advisor</h4>
+<h4>/product-design Five-lens advisor</h4>
 <p>Runs any product decision (a feature idea, a priority call, a positioning question) through five
    product minds, in order, then delivers one verdict:</p>
 <table>
   <thead><tr><th>Lens</th><th>Question it forces</th></tr></thead>
   <tbody>
-    <tr><td>Jony Ive &mdash; design as inevitability</td>
+    <tr><td>Jony Ive, design as inevitability</td>
         <td>Does this feel like the only way it could be, or one option among many? Is the care in the details detectable?</td></tr>
-    <tr><td>Steve Jobs &mdash; strategic focus</td>
+    <tr><td>Steve Jobs, strategic focus</td>
         <td>Does it fit the 2x2 product grid? If only three features could ship, is this one? Focus is saying no to a hundred good ideas.</td></tr>
-    <tr><td>Rahul Vohra &mdash; product-market fit</td>
+    <tr><td>Rahul Vohra, product-market fit</td>
         <td>Would it move the "how would you feel if you could no longer use this" score toward 40% "very disappointed"? Double down on what lovers love, or fix a fence-sitter's blocker?</td></tr>
-    <tr><td>Marty Cagan &mdash; discovery</td>
+    <tr><td>Marty Cagan, discovery</td>
         <td>Have value, usability, feasibility, and business viability been validated before building?</td></tr>
-    <tr><td>April Dunford &mdash; positioning</td>
+    <tr><td>April Dunford, positioning</td>
         <td>Does it strengthen the positioning, or dilute it? Category, alternatives, unique attributes, proof, target customer.</td></tr>
   </tbody>
 </table>
