@@ -70,7 +70,7 @@
   <p class="lead">A snapshot of the build, deploy, security, and automation stack
     Emilian Popa has put in place across all personal &amp; commercial projects.
     Compiled to share the picture in one read.</p>
-  <p class="meta">Owner: Emilian Popa &middot; Compiled: April 2026 &middot; Scope: 200+ private repos across health AI, real estate, automation, and personal tools</p>
+  <p class="meta">Owner: Emilian Popa &middot; Compiled: April 2026 &middot; Updated: July 2026 (sections 15&ndash;16) &middot; Scope: 200+ private repos across health AI, real estate, automation, and personal tools</p>
 </header>
 
 <div class="toc">
@@ -90,6 +90,8 @@
     <li><a href="#skills">Skills system (cross-project) &amp; Babysitter</a></li>
     <li><a href="#pa">Personal assistant hub (emilian-pa)</a></li>
     <li><a href="#stack">Technology &amp; vendor stack</a></li>
+    <li><a href="#operating-model">Operating model since April 2026 (parallel agent fleet)</a></li>
+    <li><a href="#coding-with-claude">Coding with Claude — idea-to-app method &amp; four-skill toolkit</a></li>
   </ol>
 </div>
 
@@ -965,10 +967,200 @@ allowed-tools: Read, Bash, Edit, Grep
   <li><strong>No public-internet dev infrastructure</strong> — Coder, SSH and the Hetzner box are all behind Tailscale.</li>
 </ul>
 
+<h2 id="operating-model">15. Operating model since April 2026 (parallel agent fleet)</h2>
+
+<p>This document is itself part of the method. It is a living "way of working" file that gets
+   handed to a collaborator to load into their own setup, so they can plug the same operating
+   model into their work. The section below captures how the fleet actually runs, and the
+   promote, worktree, and migration rules learned since the April build.</p>
+
+<h3>The six core principles</h3>
+
+<p>Distilled from a July 2026 call with Deepak, who is building his own agentic orchestration
+   harness. The skills repo (see &sect;12) was shared with Deepak and Matt so they can reuse it
+   directly rather than relearn it.</p>
+
+<ol>
+  <li><strong>An issue for everything you build.</strong> Tell the coding agent to open a GitHub
+      issue, document it, then solve it with a PR that merges. Without this the work turns into
+      spaghetti and you cannot go back to fix a bug later. Every unit of work is issue, then PR,
+      then merge.</li>
+  <li><strong>A parallel worker fleet.</strong> One VS Code instance with 10 to 20 windows open,
+      each window a worker that behaves like a developer. Workers run parallel tasks on the same
+      project at the same time.</li>
+  <li><strong>Merge safety on the core.</strong> Because several workers touch shared core code,
+      two of them merging into the same files at once can break the core, the same way two
+      developers merging into one file would. The setup has to be told to check, on every merge,
+      that the piece it is landing does not break the other pieces of work.</li>
+  <li><strong>Multiple agentic code reviewers.</strong> AI writes buggy code the way developers
+      do, and in real dev you always have review. Several agentic reviewers (CodeRabbit type) run
+      over the workers' output and produce reports several times a day. The findings get pasted
+      back into Claude Code to fix. Without the reviewers the code would be broken.</li>
+  <li><strong>Reusable skills in a shared repo.</strong> Every time you build something reusable,
+      save it as a skill in a separate GitHub repo that is open to everything else you do. Next
+      time the agent reuses the skill without you relearning it. The repo is roughly six months of
+      accumulated learnings, shared so others "use someone else's brain".</li>
+  <li><strong>Separate machines for autonomous versus sensitive work.</strong> To truly automate,
+      you give the agent full rights: Playwright takes over the browser and can drive the Mac
+      programmatically. Because of that, the fully autonomous machine stays separate from the
+      machine that holds sensitive day-to-day work and passwords. Two or three laptops, or at
+      least separate profiles.</li>
+</ol>
+
+<h3>Promote and merge rules learned since April</h3>
+
+<p>The staging-first flow in &sect;4 held up, but running many workers against it surfaced a set of
+   concrete rules that now guard every promotion.</p>
+
+<table>
+  <thead><tr><th>Rule</th><th>Why it exists</th></tr></thead>
+  <tbody>
+    <tr><td>Stop at staging, never push <code>main</code></td>
+        <td>Every session merges to staging and stops. Promotion is one explicit act the user asks for. A session never promotes on its own.</td></tr>
+    <tr><td>Verify before promote</td>
+        <td>Before any promote, confirm <code>main</code> is an ancestor of staging, review every bundled commit (not just your own), and dry-run migrations against prod in a rolled-back transaction. Flag anything risky before promoting.</td></tr>
+    <tr><td>Trigger the Promote workflow from <code>staging</code></td>
+        <td>The "Promote to Production" workflow must run with branch = staging. Running it from main fails. A <code>concurrency: promote-to-production</code> lock serializes parallel promotes so two windows cannot race a double force-push.</td></tr>
+    <tr><td>Do not trust the local <code>origin/staging</code> ref</td>
+        <td>With parallel sessions the local ref lags badly, so a just-merged PR can look like it "vanished". Check the authoritative remote directly with <code>git ls-remote origin refs/heads/staging</code> before concluding anything about staging state.</td></tr>
+    <tr><td>Railway skips merge commits</td>
+        <td>On promote, Railway can skip a merge commit and not deploy it. Verify the deploy actually took the new tip.</td></tr>
+    <tr><td>Batch, then promote once</td>
+        <td>Group changes into one PR and one promote rather than promoting per tiny change, so each production deploy is a reviewed, coherent unit.</td></tr>
+    <tr><td>File-deletion guard</td>
+        <td>CI blocks any PR deleting more than 10 files unless the body carries <code>[allow-mass-delete]</code>. A stale base branch silently dropping files is how the core gets damaged.</td></tr>
+  </tbody>
+</table>
+
+<h3>Parallel-session safety (worktrees)</h3>
+
+<p>Multiple sessions against one repo will overwrite each other's uncommitted work on shared files.
+   Three rules keep them from corrupting each other:</p>
+
+<ol>
+  <li>Never work in the main checkout. It stays parked on staging or main. Every task gets its own
+      <code>git worktree</code> so a session cannot have its branch switched out from under it
+      mid-task.</li>
+  <li>Always branch from fresh staging. Fetch the full refspec first, and re-verify HEAD before
+      trusting the working tree.</li>
+  <li>Commit frequently. If files revert mid-session the commit is still safe in git, so you rebuild
+      from the pushed SHA rather than "recovering" from a stale local ref.</li>
+</ol>
+
+<h3>Migration and cron rules learned the hard way</h3>
+
+<ol>
+  <li>Migration numbering keys on the filename. Never renumber an existing migration, and guard
+      against a false-positive collision check that fires on merge PRs.</li>
+  <li>Target tenants by id, never by a single staging slug. Slugs diverge between staging and
+      production, so a migration that matches on one staging slug silently skips prod.</li>
+  <li>Use the insert helper, not hand-numbered <code>$N</code> placeholders. Hand-numbering breaks
+      when a column is added.</li>
+  <li>Internal cron endpoints (called with an internal secret, no JWT) must be added to the server's
+      public-routes list, or the global auth guard 401s the cron silently.</li>
+</ol>
+
+<h2 id="coding-with-claude">16. Coding with Claude &mdash; idea-to-app method &amp; four-skill toolkit</h2>
+
+<p>From the Mindvalley AI Mastery 2026 "Introduction to Claude Code" class, July 2026. Where &sect;12
+   captures infrastructure skills (deploy, backup, security flows), this is the product-building
+   counterpart: a repeatable path from a raw idea to a working app, encoded as four skills.</p>
+
+<div class="panel" style="border-color: #2c4a36; background: #112116;">
+<h4>Installed as global slash commands</h4>
+<p>The four skills live on disk at <code>~/Downloads/coding-with-claude-skills/</code> and are
+   installed as global commands at <code>~/.claude/commands/</code>
+   (<code>prd.md</code>, <code>design.md</code>, <code>build.md</code>,
+   <code>product-design.md</code>). Being in the commands folder means every project can call
+   them as <code>/prd</code>, <code>/design</code>, <code>/build</code>, and
+   <code>/product-design</code> with no per-project setup.</p>
+</div>
+
+<h3>The five-step idea-to-app pipeline</h3>
+
+<div class="flow">
+mock it up ─► interview into a blueprint (/prd) ─► give it a look (/design) ─► build it (/build) ─► react and repeat
+</div>
+
+<ol>
+  <li><strong>Mock it up.</strong> Start from a rough idea or a rough visual, not a finished spec.</li>
+  <li><strong>Get interviewed into a blueprint.</strong> <code>/prd</code> runs an active discovery
+      conversation that challenges vague answers and produces a structured PRD an agent can build
+      from.</li>
+  <li><strong>Give it a look.</strong> <code>/design</code> pulls in a design system and maps it onto
+      the project's token architecture.</li>
+  <li><strong>Build it.</strong> <code>/build</code> takes a fully-resolved feature PRD and writes the
+      code, tests first, following the repo's existing patterns.</li>
+  <li><strong>React and repeat.</strong> Look at what came out, feed your reactions back, and run the
+      loop again. The value is in the iteration, not one perfect pass.</li>
+</ol>
+
+<h3>The four skills</h3>
+
+<div class="panel">
+<h4>/prd &mdash; Blueprint Interviewer</h4>
+<p>An Active Discovery PRD tool that behaves like a demanding but supportive product strategist. It
+   turns vague ideas into executable plans through conversation rather than filling out a template.
+   It never accepts the first answer, challenges vague words like "intuitive" and "seamless",
+   surfaces hidden assumptions, plays devil's advocate at least once per section, demands concrete
+   examples, and names trade-offs when goals conflict. It works at product, epic, or feature scope,
+   marks every gap with an <code>[UNRESOLVED]</code> tag, and tracks a resolution count so you always
+   know what still needs work. A section is done only when an engineer could build from it without
+   asking a clarifying question.</p>
+</div>
+
+<div class="panel">
+<h4>/design &mdash; Design System Engineer</h4>
+<p>Integrates an external design system into the project from one of three sources: a GitHub repo, a
+   live website (extracted with Playwright), or a markdown spec. It reads the source's design
+   language, then maps those decisions onto the project's existing <code>globals.css</code> token
+   slots rather than copying the source's file structure. It demands concrete values (hex, HSL, font
+   names, pixel sizes), forces a decision for both light and dark mode on every color, names every
+   place a changed token cascades to, and flags color combinations that may fail WCAG AA contrast.
+   It produces an approved, step-by-step implementation plan and does not touch a file until you
+   approve it, then verifies the build after applying.</p>
+</div>
+
+<div class="panel">
+<h4>/build &mdash; Builder</h4>
+<p>Builds a feature from a fully-resolved feature PRD. It refuses to start on a product or epic PRD,
+   or on one with unresolved sections. It reads the relevant <code>CLAUDE.md</code> files and
+   neighbouring code to learn the established patterns, generates a technical plan, and waits for
+   approval. Then it builds tests first (failing integration tests, then unit tests, then the
+   implementation that makes them pass), following the monorepo's placement and naming rules exactly.
+   It keeps a resumable build log so an interrupted build picks up cleanly, adds no new production
+   dependency without asking, flags protected areas like the database schema, and stops on a blocker
+   instead of working around it.</p>
+</div>
+
+<div class="panel">
+<h4>/product-design &mdash; Five-lens advisor</h4>
+<p>Runs any product decision (a feature idea, a priority call, a positioning question) through five
+   product minds, in order, then delivers one verdict:</p>
+<table>
+  <thead><tr><th>Lens</th><th>Question it forces</th></tr></thead>
+  <tbody>
+    <tr><td>Jony Ive &mdash; design as inevitability</td>
+        <td>Does this feel like the only way it could be, or one option among many? Is the care in the details detectable?</td></tr>
+    <tr><td>Steve Jobs &mdash; strategic focus</td>
+        <td>Does it fit the 2x2 product grid? If only three features could ship, is this one? Focus is saying no to a hundred good ideas.</td></tr>
+    <tr><td>Rahul Vohra &mdash; product-market fit</td>
+        <td>Would it move the "how would you feel if you could no longer use this" score toward 40% "very disappointed"? Double down on what lovers love, or fix a fence-sitter's blocker?</td></tr>
+    <tr><td>Marty Cagan &mdash; discovery</td>
+        <td>Have value, usability, feasibility, and business viability been validated before building?</td></tr>
+    <tr><td>April Dunford &mdash; positioning</td>
+        <td>Does it strengthen the positioning, or dilute it? Category, alternatives, unique attributes, proof, target customer.</td></tr>
+  </tbody>
+</table>
+<p>It closes with a Kill Test and one of four calls: build now, test first, reshape, or kill, with a
+   sentence of reasoning per lens.</p>
+</div>
+
 <footer>
   Generated for sharing. All numbers and workflow descriptions are pulled directly
   from the live repositories under <code>~/Projects/</code> and the GitHub account at
-  the time of compilation.
+  the time of compilation. Sections 15 and 16 added July 2026 from the operating-model
+  call notes and the "Coding with Claude" class toolkit.
 </footer>
 
 </div>
