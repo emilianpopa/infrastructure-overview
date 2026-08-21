@@ -70,7 +70,7 @@
   <p class="lead">A snapshot of the build, deploy, security, and automation stack
     Emilian Popa has put in place across all personal &amp; commercial projects.
     Compiled to share the picture in one read.</p>
-  <p class="meta">Owner: Emilian Popa &middot; Compiled: April 2026 &middot; Updated: July 2026 (sections 15&ndash;16) &middot; Scope: 200+ private repos across health AI, real estate, automation, and personal tools</p>
+  <p class="meta">Owner: Emilian Popa &middot; Compiled: April 2026 &middot; Updated: August 2026 (section 17 &mdash; the brain) &middot; Scope: 200+ private repos across health AI, real estate, automation, and personal tools</p>
 </header>
 
 <div class="toc">
@@ -92,6 +92,7 @@
     <li><a href="#stack">Technology &amp; vendor stack</a></li>
     <li><a href="#operating-model">Operating model since April 2026 (parallel agent fleet)</a></li>
     <li><a href="#coding-with-claude">Coding with Claude — idea-to-app method &amp; four-skill toolkit</a></li>
+    <li><a href="#brain">The brain — a private RAG over everything</a></li>
   </ol>
 </div>
 
@@ -947,6 +948,9 @@ allowed-tools: Read, Bash, Edit, Grep
     <tr><td>Languages</td><td>JavaScript, TypeScript, Python, Java, Kotlin, Ruby, Shell, HCL/Terraform</td></tr>
     <tr><td>Frameworks</td><td>Node/Express, Next.js, React, Flask, Sanity CMS</td></tr>
     <tr><td>AI orchestration</td><td>Claude Code (Anthropic), Claude Code GitHub Action, Flowise (workflow builder, multiple Railway iterations)</td></tr>
+    <tr><td>Vector storage</td><td>Pinecone serverless (AWS us-east-1) &mdash; two isolated indexes, <code>emilian-brain</code> and <code>expandhealth-brain</code></td></tr>
+    <tr><td>Embeddings</td><td>OpenAI <code>text-embedding-3-small</code> (personal brain, 1536-dim) &middot; Google <code>gemini-embedding-001</code> (ExpandHealth brain)</td></tr>
+    <tr><td>Answer models</td><td>Claude Opus 4.8 (personal brain) &middot; GPT-4o and Gemini 2.5 Flash (ExpandHealth brain)</td></tr>
     <tr><td>Monitoring &amp; alerting</td><td>Sentry (PAYG), GitHub Actions notifications, custom failure-summary jobs</td></tr>
     <tr><td>Networking</td><td>Tailscale VPN (zero-trust access to dev infra)</td></tr>
     <tr><td>Auth / secrets</td><td>GitHub Secrets, Railway env vars, OAuth tokens stored locally for Gmail/Calendar</td></tr>
@@ -1163,6 +1167,124 @@ mock it up ─► interview into a blueprint (/prd) ─► give it a look (/desi
   the time of compilation. Sections 15 and 16 added July 2026 from the operating-model
   call notes and the "Coding with Claude" class toolkit.
 </footer>
+
+
+<h2 id="brain">17. The brain &mdash; a private RAG over everything</h2>
+
+<p class="lead">The largest thing built since this document was last updated. A retrieval
+   system over a personal corpus: every email, document, repository, conversation and course,
+   searchable by meaning and answerable in one place.</p>
+
+<div class="grid">
+  <div class="stat"><div class="num">865k</div><div class="lbl">indexed chunks</div></div>
+  <div class="stat"><div class="num">14</div><div class="lbl">source connectors</div></div>
+  <div class="stat"><div class="num">2014&ndash;2026</div><div class="lbl">years of history</div></div>
+  <div class="stat"><div class="num">04:00</div><div class="lbl">nightly ingest, unattended</div></div>
+</div>
+
+<h3>How it works</h3>
+
+<div class="flow">
+source &rarr; connector &rarr; chunk (1,500 chars, 200 overlap) &rarr; embed &rarr; Pinecone
+                                                                            &darr;
+                              question &rarr; embed &rarr; nearest chunks &rarr; Claude Opus &rarr; answer
+</div>
+
+<p>Two details that matter more than they look. Pinecone stores the <strong>readable text
+   alongside the vector</strong>, not just a numeric fingerprint, so answers quote real
+   passages with dates and participants rather than paraphrasing. And each vector's id is
+   <code>{source}::{sha1(text)}</code>, which makes the whole pipeline <strong>idempotent</strong>:
+   re-ingesting unchanged material is a no-op, so the nightly run costs only what genuinely changed.</p>
+
+<h3>What is in it</h3>
+<ul>
+  <li><strong>Email</strong> &mdash; four accounts, full history</li>
+  <li><strong>Google Drive</strong> &mdash; incremental, skips unchanged files via a modified-time cache</li>
+  <li><strong>GitHub</strong> &mdash; issues, PRs, commits and docs across every owned repo (never source code)</li>
+  <li><strong>WhatsApp</strong> &mdash; 788,934 messages across 5,051 chats, 2014 to 2026</li>
+  <li><strong>Calendar, meeting transcripts, voice recordings</strong> (Whisper), <strong>books, courses, newsletters, Readwise highlights, notes</strong></li>
+  <li><strong>Project memory</strong> &mdash; the assistant's own notes from every repo</li>
+</ul>
+
+<p>Content is routed into namespaces &mdash; <code>personal</code>, <code>family</code>,
+   <code>work</code>, <code>expandhealth</code>, <code>ilara</code>, <code>reading</code>,
+   <code>comms</code> &mdash; so a work question does not retrieve family messages.</p>
+
+<h3>The WhatsApp archive, as a worked example</h3>
+
+<div class="panel">
+<p>WhatsApp has no API for personal history, and the desktop app holds only a recent window.
+   The full archive had to be recovered from an iPhone backup, and the resulting corpus needed
+   real engineering before it was worth indexing:</p>
+<ul>
+  <li><strong>Recovery</strong> &mdash; the device backup aborted at 79% with no manifest, so the
+      database was pulled directly by computing <code>sha1("&lt;domain&gt;-&lt;path&gt;")</code>,
+      which is how iOS names every file in a backup</li>
+  <li><strong>Sender names</strong> &mdash; group participants arrive as opaque identifiers. A layered
+      map built from four sources in the database (the highest-value being each 1:1 chat, which maps
+      a number to the name its owner gave that person) took unnamed senders from 17% to 2.1%</li>
+  <li><strong>Signal vs noise</strong> &mdash; chats classified by <em>participation rate &times; sender
+      diversity</em>, not by title. That identified 42 broadcast channels holding 281,000 messages
+      their owner had never posted in &mdash; 26% of the corpus, and pure retrieval noise. Dropped.</li>
+  <li><strong>Staying current</strong> &mdash; a nightly job reads the macOS WhatsApp database and
+      <em>appends</em> new messages. Because chunks are content-hashed, appending leaves every earlier
+      chunk byte-identical: a recent run added 907 messages at a cost of 331 re-embedded chunks out
+      of 24,469.</li>
+</ul>
+</div>
+
+<h3>Interfaces</h3>
+<ul>
+  <li><strong>Hosted chat</strong> &mdash; Streamlit on Railway, password-gated, chat history on a mounted volume</li>
+  <li><strong>MCP server</strong> &mdash; exposes <code>search_brain</code> and <code>brain_stats</code>
+      to <em>every</em> Claude Code session in <em>every</em> repository, so any project can consult the
+      corpus without leaving the terminal</li>
+  <li><strong>Daily brief</strong> &mdash; a nightly distillation, plus a commitments ledger that tracks
+      promises made to people, where a candidate is discarded unless its quote is verifiably present
+      in the source</li>
+</ul>
+
+<h3>Two brains, deliberately separate</h3>
+
+<table>
+  <thead><tr><th></th><th>emilian-brain</th><th>expandhealth-brain</th></tr></thead>
+  <tbody>
+    <tr><td>Corpus</td><td>Personal &mdash; email, Drive, WhatsApp, GitHub, reading</td><td>Company &mdash; Expand Health Drive documents, podcasts</td></tr>
+    <tr><td>Index</td><td><code>emilian-brain</code></td><td><code>expandhealth-brain</code></td></tr>
+    <tr><td>Embeddings</td><td>OpenAI <code>text-embedding-3-small</code></td><td>Google <code>gemini-embedding-001</code></td></tr>
+    <tr><td>Answers</td><td>Claude Opus 4.8</td><td>GPT-4o / Gemini 2.5 Flash</td></tr>
+  </tbody>
+</table>
+
+<p>The separation is the point: personal material does not belong in a company knowledge base.
+   Where the company brain genuinely needs personal context, the two <strong>federate at query
+   time</strong> &mdash; one brain asks, the other retrieves and returns passages, and
+   <strong>no data is ever copied between them</strong>. A namespace privacy gate keeps family and
+   private communications out of anything a company system can reach.</p>
+
+<p>The differing model choices are partly deliberate and partly historical. Vectors from different
+   embedding models are not comparable, so the two corpora could never be merged by copying &mdash;
+   they would have to be re-embedded from scratch. That constraint is what makes query-time
+   federation the right architecture rather than a compromise.</p>
+
+<h3>Durability</h3>
+
+<div class="panel">
+<p>The corpus lived in exactly two places &mdash; Pinecone and one laptop &mdash; with no backup of
+   either. A weekly export now writes chunk text and metadata to a gzipped file in Google Drive,
+   keeping six rotating copies.</p>
+<p><strong>Vectors are deliberately excluded.</strong> They are ~5.3&nbsp;GB against ~600&nbsp;MB for
+   the text, and are re-computable by re-embedding for a few dollars. The text is the irreplaceable
+   half. The backup job authenticates with a scope that grants access only to files it creates
+   itself, so it can never read the rest of the Drive.</p>
+</div>
+
+<h3>What this is actually for</h3>
+<p>Two things. Recall &mdash; a question like <em>what did I agree with the landlord about the roof</em>
+   returns the actual thread with the date, whatever words were used at the time. And voice: mining
+   266,170 personally-written messages produced measured per-recipient writing registers, so drafted
+   messages match how their author genuinely writes to that specific person rather than to an average
+   of everyone.</p>
 
 </div>
 </body>
