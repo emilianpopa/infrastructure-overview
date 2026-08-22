@@ -1270,14 +1270,45 @@ source &rarr; connector &rarr; chunk (1,500 chars, 200 overlap) &rarr; embed &ra
 <h3>Durability</h3>
 
 <div class="panel">
-<p>The corpus lived in exactly two places &mdash; Pinecone and one laptop &mdash; with no backup of
-   either. A weekly export now writes chunk text and metadata to a gzipped file in Google Drive,
-   keeping six rotating copies.</p>
+<p>The corpus lives in exactly two places, Pinecone and one laptop. A weekly export writing chunk
+   text and metadata to a gzipped file in Google Drive, keeping six rotating copies, is specified
+   and is the next thing to be built.</p>
 <p><strong>Vectors are deliberately excluded.</strong> They are ~5.3&nbsp;GB against ~600&nbsp;MB for
    the text, and are re-computable by re-embedding for a few dollars. The text is the irreplaceable
-   half. The backup job authenticates with a scope that grants access only to files it creates
+   half. The job will authenticate with a scope that grants access only to files it creates
    itself, so it can never read the rest of the Drive.</p>
 </div>
+
+<h3>Three stores, not two</h3>
+
+<p>The two-brain split above is real, but it describes the two <em>Pinecone</em> corpora. The Expand
+   Health product does not read either of them. Its knowledge base is a third store: per-tenant
+   <strong>pgvector inside the application's own PostgreSQL</strong>, using Google
+   <code>embedding-001</code> at 768 dimensions, added in migration
+   <code>207-kb-pgvector-embeddings.sql</code>. There is no Pinecone dependency in the platform at all.</p>
+
+<p>This matters when deciding where new material belongs. Putting clinical reference material into the
+   <code>expandhealth-brain</code> Pinecone index does not make the product ground its reports on it,
+   because the product cannot see that index. Material intended for the product has to go through the
+   tenant knowledge base, which is tenant-scoped by design. Material intended for the terminal goes to
+   <code>emilian-brain</code>, which every repository can reach through the <code>search_brain</code>
+   MCP tool.</p>
+
+<h3>Known gap: the un-ingested corpus</h3>
+
+<p>A 2.6&nbsp;GB library of 377 PDFs sits outside all three stores. It was collected for the brain but
+   was never wired in: the books connector reads <code>BOOKS_DIR</code>, which defaults to the
+   repository's own <code>data/books</code>, and this library lives elsewhere on disk.</p>
+
+<p>It was verified absent rather than assumed absent. Real text pulled from its PDFs and embedded as a
+   query returns best matches of 0.71 to 0.86 against the index, where genuinely indexed material
+   scores above 0.95. One folder is a good illustration of why a spot check is not enough: a plain-text
+   transcript of a course is indexed, while all 72 PDFs of the same course are not, so a casual query
+   returns something plausible and the gap stays invisible.</p>
+
+<p>39 of the 377 have no text layer. They are scans and slide images, and the connector extracts
+   nothing from them while still reporting a successful run, which is the failure mode worth guarding
+   against: material that appears ingested, is queryable, and returns nothing it should.</p>
 
 <h3>What this is actually for</h3>
 <p>Two things. Recall &mdash; a question like <em>what did I agree with the landlord about the roof</em>
