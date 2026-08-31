@@ -1270,13 +1270,27 @@ source &rarr; connector &rarr; chunk (1,500 chars, 200 overlap) &rarr; embed &ra
 <h3>Durability</h3>
 
 <div class="panel">
-<p>The corpus lives in exactly two places, Pinecone and one laptop. A weekly export writing chunk
-   text and metadata to a gzipped file in Google Drive, keeping six rotating copies, is specified
-   and is the next thing to be built.</p>
-<p><strong>Vectors are deliberately excluded.</strong> They are ~5.3&nbsp;GB against ~600&nbsp;MB for
+<p>A weekly export writes chunk text and metadata to a gzipped file in Google Drive, keeping six
+   rotating copies. First full run 25 Aug 2026: 916,472 records, 1,216&nbsp;MB of text compressed to
+   354&nbsp;MB, scheduled Sundays at 04:00.</p>
+<p><strong>Vectors are deliberately excluded.</strong> They are ~5.3&nbsp;GB against ~354&nbsp;MB for
    the text, and are re-computable by re-embedding for a few dollars. The text is the irreplaceable
-   half. The job will authenticate with a scope that grants access only to files it creates
-   itself, so it can never read the rest of the Drive.</p>
+   half.</p>
+<p>The export refuses to trust itself. It re-reads the file it just wrote, counts the records back,
+   and requires both 95% of the expected count and 90% of records carrying real text before it will
+   promote anything. A run that fails either check keeps its partial output for diagnosis, exits
+   non-zero, and leaves the existing copies in Drive untouched, so a bad export can never overwrite
+   a good backup.</p>
+<p>That gate earned itself on the first attempt. A run on 22 Aug reached 860,000 of 867,159 records
+   and produced a corrupt gzip, because the machine's swapfile had grown into the free space the
+   write needed. The verification caught it and promoted nothing. The cause was addressed with a
+   preflight disk check and a floor test every 20,000 records that aborts before truncation rather
+   than after, and the rerun completed clean.</p>
+<p>Verification is only worth what it independently checks, so the artifact was pulled back down from
+   Drive and decompressed without the export code: byte-identical size, 916,472 records, 916,472
+   unique ids, 99.7% carrying text, spread across drive, email, github, whatsapp, calendar, books and
+   six smaller sources. Checking the local file you just wrote proves the writer works. Checking the
+   copy that would actually be restored proves the backup exists.</p>
 </div>
 
 <h3>Three stores, not two</h3>
