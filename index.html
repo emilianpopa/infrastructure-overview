@@ -70,12 +70,13 @@
   <p class="lead">A snapshot of the build, deploy, security, and automation stack
     Emilian Popa has put in place across all personal &amp; commercial projects.
     Compiled to share the picture in one read.</p>
-  <p class="meta">Owner: Emilian Popa &middot; Compiled: April 2026 &middot; Updated: August 2026 (section 17 &mdash; the brain) &middot; Scope: 200+ private repos across health AI, real estate, automation, and personal tools</p>
+  <p class="meta">Owner: Emilian Popa &middot; Compiled: April 2026 &middot; Updated: October 2026 (new section 0, plus corrections to sections 1, 3, 7, 10, 11 and 14) &middot; Scope: 200+ private repos across health AI, real estate, automation, and personal tools</p>
 </header>
 
 <div class="toc">
   <strong>Contents</strong>
-  <ol>
+  <ol start="0">
+    <li><a href="#start-here">Start here: how a repo is set up for Claude Code (flowchart)</a></li>
     <li><a href="#snapshot">At-a-glance snapshot</a></li>
     <li><a href="#github">GitHub — source of truth</a></li>
     <li><a href="#cloud-dev">Cloud development environment</a></li>
@@ -86,7 +87,7 @@
     <li><a href="#sentry">Error monitoring (Sentry)</a></li>
     <li><a href="#railway">Railway — production hosting</a></li>
     <li><a href="#claude">Autonomous Claude integrations</a></li>
-    <li><a href="#bots">Bots, emails &amp; why "PR Review" keeps failing right now</a></li>
+    <li><a href="#bots">Bots, emails &amp; why "PR Review" fails</a></li>
     <li><a href="#skills">Skills system (cross-project) &amp; Babysitter</a></li>
     <li><a href="#pa">Personal assistant hub (emilian-pa)</a></li>
     <li><a href="#stack">Technology &amp; vendor stack</a></li>
@@ -96,15 +97,127 @@
   </ol>
 </div>
 
+<h2 id="start-here">0. Start here: how a repo is set up for Claude Code</h2>
+
+<p>Opening Claude Code and typing works for a weekend project. It stops working at the second or
+   third project, because every session starts from zero. It does not know your rules or remember what
+   broke last week, and it edits whatever is on disk. The rest of this page is plumbing around one idea:
+   put the context and the rules in files the agent reads every time, so the structure lives in the repo.</p>
+
+<div class="panel" style="overflow-x:auto">
+<svg viewBox="0 0 910 640" width="100%" style="min-width:640px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif" role="img" aria-label="Flowchart: global layer, repo layer and memory feed a Claude Code session in its own worktree, which opens a PR into staging, passes CI gates, deploys to staging, gets QA, and is promoted to production; lessons flow back into memory and skills">
+  <defs>
+    <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#97a3b1"/></marker>
+    <marker id="ahg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#7ce3a8"/></marker>
+  </defs>
+  <style>
+    .bx{fill:#1b2128;stroke:#3a4552;stroke-width:1.2}
+    .bx.a{stroke:#6ea8fe}.bx.g{stroke:#7ce3a8}.bx.w{stroke:#f0b86e}
+    .t{fill:#e7ecf1;font-size:14px;font-weight:600}
+    .s{fill:#97a3b1;font-size:11.5px}
+    .k{fill:#6ea8fe;font-size:11px;letter-spacing:.08em;font-weight:600}
+    .ln{stroke:#97a3b1;stroke-width:1.4;fill:none;marker-end:url(#ah)}
+    .lb{stroke:#7ce3a8;stroke-width:1.4;fill:none;stroke-dasharray:5 4;marker-end:url(#ahg)}
+  </style>
+
+  <text class="k" x="20" y="22">1 &#183; CONTEXT THE AGENT LOADS EVERY SESSION</text>
+  <rect class="bx a" x="20" y="34" width="270" height="92" rx="8"/>
+  <text class="t" x="34" y="58">Global layer (~/.claude)</text>
+  <text class="s" x="34" y="78">CLAUDE.md: who you are, writing rules,</text>
+  <text class="s" x="34" y="94">never-do list. Shared skills repo,</text>
+  <text class="s" x="34" y="110">symlinked onto every machine.</text>
+
+  <rect class="bx a" x="315" y="34" width="270" height="92" rx="8"/>
+  <text class="t" x="329" y="58">Repo layer (per project)</text>
+  <text class="s" x="329" y="78">.claude/CLAUDE.md: stack, deploy flow,</text>
+  <text class="s" x="329" y="94">env table. .claude/rules/ for standards.</text>
+  <text class="s" x="329" y="110">Project skills for repeated workflows.</text>
+
+  <rect class="bx a" x="610" y="34" width="270" height="92" rx="8"/>
+  <text class="t" x="624" y="58">Memory (per project)</text>
+  <text class="s" x="624" y="78">One file per fact, indexed in MEMORY.md.</text>
+  <text class="s" x="624" y="94">Gotchas, decisions, state of play.</text>
+  <text class="s" x="624" y="110">Written by the agent, read next session.</text>
+
+  <path class="ln" d="M155 126 V160 H745 V126" style="marker-end:none"/>
+  <path class="ln" d="M450 126 V180"/>
+
+  <text class="k" x="20" y="196">2 &#183; ONE TASK = ONE ISSUE = ONE WORKTREE</text>
+  <rect class="bx" x="20" y="208" width="270" height="78" rx="8"/>
+  <text class="t" x="34" y="232">GitHub issue</text>
+  <text class="s" x="34" y="252">Agent opens it first, so every change</text>
+  <text class="s" x="34" y="268">has a record you can come back to.</text>
+
+  <rect class="bx" x="315" y="182" width="270" height="104" rx="8"/>
+  <text class="t" x="329" y="206">Claude Code session</text>
+  <text class="s" x="329" y="226">Runs in its own git worktree on a</text>
+  <text class="s" x="329" y="242">feature branch cut from staging.</text>
+  <text class="s" x="329" y="258">Never in the main checkout, so parallel</text>
+  <text class="s" x="329" y="274">windows cannot overwrite each other.</text>
+
+  <rect class="bx" x="610" y="208" width="270" height="78" rx="8"/>
+  <text class="t" x="624" y="232">Pull request into staging</text>
+  <text class="s" x="624" y="252">Never into main. A workflow blocks</text>
+  <text class="s" x="624" y="268">PRs that target main directly.</text>
+
+  <path class="ln" d="M290 247 H313"/>
+  <path class="ln" d="M585 247 H608"/>
+
+  <text class="k" x="20" y="320">3 &#183; GATES NOBODY CAN SKIP</text>
+  <rect class="bx w" x="20" y="332" width="860" height="78" rx="8"/>
+  <text class="t" x="34" y="356">CI on every PR</text>
+  <text class="s" x="34" y="376">Lint and tests &#183; syntax and smoke boot &#183; secret scan (TruffleHog) &#183; dependency scan (npm audit, Snyk) &#183; CodeQL</text>
+  <text class="s" x="34" y="394">Two AI reviewers that did not write the code: Claude Code Review and CodeRabbit &#183; file-deletion and migration-collision guards</text>
+  <path class="ln" d="M745 286 V330"/>
+
+  <text class="k" x="20" y="444">4 &#183; SHIP IN TWO STEPS</text>
+  <rect class="bx g" x="20" y="456" width="270" height="78" rx="8"/>
+  <text class="t" x="34" y="480">Merge to staging</text>
+  <text class="s" x="34" y="500">Railway auto-deploys a separate</text>
+  <text class="s" x="34" y="516">staging app with its own database.</text>
+
+  <rect class="bx g" x="315" y="456" width="270" height="78" rx="8"/>
+  <text class="t" x="329" y="480">QA on staging</text>
+  <text class="s" x="329" y="500">Click through it like a user.</text>
+  <text class="s" x="329" y="516">Bugs go back to step 2.</text>
+
+  <rect class="bx g" x="610" y="456" width="270" height="78" rx="8"/>
+  <text class="t" x="624" y="480">Promote to production</text>
+  <text class="s" x="624" y="500">One deliberate human action. Checks</text>
+  <text class="s" x="624" y="516">re-run, staging syncs to main, deploy.</text>
+
+  <path class="ln" d="M250 410 V454"/>
+  <path class="ln" d="M290 495 H313"/>
+  <path class="ln" d="M585 495 H608"/>
+
+  <text class="k" x="20" y="568">5 &#183; CLOSE THE LOOP</text>
+  <rect class="bx" x="20" y="580" width="860" height="48" rx="8"/>
+  <text class="s" x="34" y="609">Anything that surprised you (a bug, a gotcha, a rule you had to repeat) becomes a memory file or a skill. The next session starts smarter.</text>
+  <path class="lb" d="M880 604 H898 V80 H884"/>
+</svg>
+</div>
+
+<h3>What to set up, in order</h3>
+<ol>
+  <li>A global <code>~/.claude/CLAUDE.md</code> with how you want the agent to work and what it must never do (push to main, delete data, email real people). Keep it short.</li>
+  <li>One <code>.claude/CLAUDE.md</code> per repo: what the app is, the stack, how to run it locally, how it deploys, which branch is which. Most of what the agent gets right on a repo comes from this file.</li>
+  <li>Two branches per app, <code>staging</code> and <code>main</code>, each auto-deploying to its own environment with its own database. Turn on branch protection so neither accepts a direct push.</li>
+  <li>CI on every PR. Start with lint, tests and a secret scan, then add an AI reviewer. Do not let the agent that wrote the code review it.</li>
+  <li>A worktree per task once you run more than one Claude window: <code>git worktree add -b fix/thing ../thing origin/staging</code>.</li>
+  <li>Memory and skills come last. They pay off once you notice yourself telling the agent the same thing twice.</li>
+</ol>
+<p>The rest of this page is the detail behind each box: sections 4 and 5 cover the gates, 12 the skills
+   system, 15 the parallel-session rules, 16 the idea-to-app method.</p>
+
 <h2 id="snapshot">1. At-a-glance snapshot</h2>
 
 <div class="grid">
   <div class="stat"><div class="num">200+</div><div class="lbl">Private GitHub repos</div></div>
   <div class="stat"><div class="num">40+</div><div class="lbl">Railway projects</div></div>
   <div class="stat"><div class="num">11</div><div class="lbl">CI/CD workflows on flagship app</div></div>
-  <div class="stat"><div class="num">90 days</div><div class="lbl">Backup retention &amp; restore-tested</div></div>
-  <div class="stat"><div class="num">€18 / mo</div><div class="lbl">Self-hosted cloud dev environment</div></div>
-  <div class="stat"><div class="num">€0</div><div class="lbl">CI cost (self-hosted runner)</div></div>
+  <div class="stat"><div class="num">90 days</div><div class="lbl">Backup retention target (see &sect;7)</div></div>
+  <div class="stat"><div class="num">10&ndash;20</div><div class="lbl">Parallel Claude Code sessions on a normal day</div></div>
+  <div class="stat"><div class="num">2</div><div class="lbl">AI reviewers on every PR</div></div>
 </div>
 
 <p>The stack is opinionated: every project flows the same way — code on GitHub,
@@ -162,6 +275,15 @@
 </ul>
 
 <h2 id="cloud-dev">3. Cloud development environment</h2>
+
+<div class="panel warn">
+<h4>Retired (update, October 2026)</h4>
+<p>Both Hetzner servers have been deleted, along with the Coder workspaces and the self-hosted
+   GitHub Actions runner that lived on them. Development now runs locally: VS Code with many
+   Claude Code windows open, each in its own git worktree (see &sect;15). CI runs on GitHub-hosted
+   <code>ubuntu-latest</code> runners. The build below is kept because it still works as a recipe if
+   you want a remote dev box, but it no longer describes the live setup.</p>
+</div>
 
 <p>A self-hosted, single-server developer cloud designed so that any project — no matter where —
    can spin up a fresh, identical workspace in ~90 seconds. The whole thing is built on
@@ -399,6 +521,18 @@ feature/xxx ─► PR into staging ─► auto-checks ─► QA on staging ─�
 
 <h2 id="backup">7. Backups &amp; disaster recovery</h2>
 
+<div class="panel warn">
+<h4>Correction (October 2026)</h4>
+<p>The pipeline below ran green every night, and it was backing up the wrong database. On 29 Sep 2026
+   an audit compared the row counts in the job log with production and found they matched staging:
+   the connection-string secret pointed at the staging database. The green check only meant the job had
+   run. The fix moves the nightly dump off GitHub runners into a Railway cron service inside the
+   production environment. Each dump is encrypted with the <code>age</code> tool before upload, and every
+   run sends a Sentry check-in. It is being cut over now, and the GitHub workflow stays until the
+   new job has 7 good nights and a restore test from one of its files. Check a backup by what is inside
+   it: row counts, size, a restore.</p>
+</div>
+
 <p>The backup story is the part most teams skip. Here it's a three-workflow pipeline so the
    recovery position is provable, not aspirational.</p>
 
@@ -560,7 +694,7 @@ function scrubPHI(event) {
 
 <p>Claude Code is wired into several repos as both an automatic reviewer and an on-demand
    collaborator. The integration uses the official <code>anthropics/claude-code-action@v1</code>
-   GitHub Action and runs on the self-hosted Hetzner runner (so it consumes <strong>zero
+   GitHub Action and runs on GitHub-hosted runners now; when this was written it ran on a self-hosted Hetzner runner, since retired (see &sect;3), and consumed <strong>zero
    GitHub Actions minutes</strong>).</p>
 
 <h3>Two patterns in production</h3>
@@ -588,7 +722,16 @@ function scrubPHI(event) {
    work autonomously when it's mentioned.</p>
 </div>
 
-<h2 id="bots">11. Bots, emails &amp; why "PR Review" keeps failing right now</h2>
+<h2 id="bots">11. Bots, emails &amp; why "PR Review" fails</h2>
+
+<div class="panel warn">
+<h4>September 2026: review jobs failing, check the quota first</h4>
+<p>On 28 Sep 2026 every Claude Code Review run across the repos failed in about half a second at zero
+   cost. The CI token sat on the same Claude subscription as the interactive sessions, and a heavy day
+   of parallel work used up the weekly quota by 11:00 UTC. CI now runs on its own subscription. If a
+   review job fails in under a second, check the token and its quota before you look at the PR. The
+   April findings below are kept as history.</p>
+</div>
 
 <div class="panel warn">
 <h4>Two newer findings (2026-04-10 second autonomous run)</h4>
@@ -639,7 +782,7 @@ git push</pre>
   <thead><tr><th>#</th><th>Bot / source</th><th>What it does</th><th>Notifies you when</th></tr></thead>
   <tbody>
     <tr><td>1</td><td><strong>Claude Code Reviewer</strong><br><code>code-review.yml</code> + <code>pr-review.yml</code></td>
-        <td>Anthropic's <code>claude-code-action@v1</code> running on the self-hosted Hetzner runner. Reviews every <code>opened / synchronize / reopened</code> PR with model <code>claude-sonnet-4-6</code>. Posts inline review comments + a summary, focused on correctness, security, and clarity. Reads each repo's <code>CLAUDE.md</code> for project-specific guidance.</td>
+        <td>Anthropic's <code>claude-code-action@v1</code> running on GitHub-hosted runners. Reviews every <code>opened / synchronize / reopened</code> PR with model <code>claude-sonnet-4-6</code>. Posts inline review comments + a summary, focused on correctness, security, and clarity. Reads each repo's <code>CLAUDE.md</code> for project-specific guidance.</td>
         <td>Every PR opened or pushed to. Live in: <code>dawa-ai</code>, <code>whatsapp-analyzer</code>, <code>expandhealthai</code>.</td></tr>
     <tr><td>2</td><td><strong>Claude @mention helper</strong><br><code>claude-pr.yml</code></td>
         <td>The same action, triggered by any PR / issue / review comment containing <code>@claude</code>. Lets you converse with Claude inside the GitHub UI — "explain this regression", "rewrite this test", "pull the failing logs" — without leaving the browser.</td>
@@ -743,7 +886,7 @@ git push</pre>
         <td>The lightweight Python CI stack — <code>ruff + pytest + bandit + pip-audit + Dependabot</code>. Three workflow files (<code>ci.yml</code> / <code>security.yml</code> / <code>dependabot.yml</code>) plus <code>pyproject.toml</code> + <code>requirements-dev.txt</code> scaffolding</td>
         <td>Extracted from <code>linkedin-automation</code> — the Python equivalent of the heavier Node stack</td></tr>
     <tr><td><code>claude-code-review-action-setup</code></td>
-        <td>Wire up the Anthropic Claude Code action on a new repo — both <code>code-review.yml</code> (auto PR review) and <code>claude-pr.yml</code> (the <code>@claude</code> mention helper), with the self-hosted runner pattern and the OAuth token prerequisite</td>
+        <td>Wire up the Anthropic Claude Code action on a new repo — both <code>code-review.yml</code> (auto PR review) and <code>claude-pr.yml</code> (the <code>@claude</code> mention helper), with the OAuth token prerequisite</td>
         <td>Extracted from the live workflows in <code>dawa-ai</code>, <code>whatsapp-analyzer</code>, <code>expandhealthai</code></td></tr>
     <tr><td><code>backup-restore-test-pattern</code></td>
         <td>The full daily backup + weekly retention cleanup + monthly restore-test trinity for any Postgres-backed Railway app, with B2 setup, the Backblaze Daily Storage Cap consideration, and the HIPAA BAA pointer</td>
@@ -940,16 +1083,17 @@ allowed-tools: Read, Bash, Edit, Grep
   <thead><tr><th>Layer</th><th>Vendors / tools</th></tr></thead>
   <tbody>
     <tr><td>Source control</td><td>GitHub (private org-scoped account, 200+ repos)</td></tr>
-    <tr><td>CI / CD</td><td>GitHub Actions on a self-hosted Hetzner runner — €0 minutes</td></tr>
+    <tr><td>CI / CD</td><td>GitHub Actions on GitHub-hosted runners (self-hosted Hetzner runner retired)</td></tr>
     <tr><td>Production hosting</td><td>Railway (auto-deploy from <code>main</code>/<code>master</code>)</td></tr>
-    <tr><td>Dev environment</td><td>Hetzner CX42 + Coder + Tailscale + code-server</td></tr>
-    <tr><td>Database</td><td>PostgreSQL 17 (Railway-hosted in prod, Docker on the dev box)</td></tr>
+    <tr><td>Dev environment</td><td>Local: VS Code, 10&ndash;20 Claude Code windows, one git worktree per task</td></tr>
+    <tr><td>Database</td><td>PostgreSQL 17 (Railway-hosted, separate databases for staging and production)</td></tr>
     <tr><td>Object storage / backups</td><td>Backblaze B2 (<code>expandhealth-backups</code> bucket)</td></tr>
     <tr><td>Languages</td><td>JavaScript, TypeScript, Python, Java, Kotlin, Ruby, Shell, HCL/Terraform</td></tr>
     <tr><td>Frameworks</td><td>Node/Express, Next.js, React, Flask, Sanity CMS</td></tr>
     <tr><td>AI orchestration</td><td>Claude Code (Anthropic), Claude Code GitHub Action, Flowise (workflow builder, multiple Railway iterations)</td></tr>
     <tr><td>Vector storage</td><td>Pinecone serverless (AWS us-east-1) &mdash; two isolated indexes, <code>emilian-brain</code> and <code>expandhealth-brain</code></td></tr>
     <tr><td>Embeddings</td><td>OpenAI <code>text-embedding-3-small</code> (personal brain, 1536-dim) &middot; Google <code>gemini-embedding-001</code> (ExpandHealth brain)</td></tr>
+    <tr><td>Platform AI (ExpandHealth app)</td><td>Claude for reports and lab summaries (Haiku 4.5 for lab summaries). The app knowledge base moved to pgvector with OpenAI embeddings on 29 Sep 2026, retiring its Gemini File Search dependency. OpenRouter open-model routing was switched off on 28 Sep 2026 pending a data-processing agreement.</td></tr>
     <tr><td>Answer models</td><td>Claude Opus 4.8 (personal brain) &middot; GPT-4o and Gemini 2.5 Flash (ExpandHealth brain)</td></tr>
     <tr><td>Monitoring &amp; alerting</td><td>Sentry (PAYG), GitHub Actions notifications, custom failure-summary jobs</td></tr>
     <tr><td>Networking</td><td>Tailscale VPN (zero-trust access to dev infra)</td></tr>
@@ -964,11 +1108,10 @@ allowed-tools: Read, Bash, Edit, Grep
 
 <h3>What's deliberately <em>not</em> here</h3>
 <ul>
-  <li><strong>No Snyk / no Datadog / no New Relic</strong> — replaced by the open-source matrix above.</li>
+  <li><strong>No Datadog / no New Relic</strong>: Sentry plus the open-source matrix above. (Snyk is used, as a GitHub App; see &sect;6.)</li>
   <li><strong>No Kubernetes</strong> — Railway handles container orchestration; the dev box runs plain Docker.</li>
-  <li><strong>No paid CI minutes</strong> — self-hosted runner on Hetzner.</li>
   <li><strong>No manual deploys</strong> — Railway auto-deploys from <code>main</code>; the <code>railway up</code> CLI is policy-banned.</li>
-  <li><strong>No public-internet dev infrastructure</strong> — Coder, SSH and the Hetzner box are all behind Tailscale.</li>
+  <li><strong>No shared dev server</strong>: the Hetzner box is retired; work happens locally in isolated worktrees.</li>
 </ul>
 
 <h2 id="operating-model">15. Operating model since April 2026 (parallel agent fleet)</h2>
